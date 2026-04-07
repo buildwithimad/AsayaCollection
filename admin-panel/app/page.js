@@ -2,7 +2,7 @@ import AdminLoginUI from '@/components/AdminLoginUi';
 import { processAdminLogin } from '@/app/action/authActions'; // Adjust the import path if needed
 
 export const metadata = {
-  title: 'Control Panel Authentication | Asaya',
+  title: 'Admin Panel | Asaya Collection',
   robots: 'noindex, nofollow', 
 };
 

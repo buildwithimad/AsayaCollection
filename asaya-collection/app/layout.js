@@ -1,0 +1,33 @@
+import { Montserrat } from "next/font/google";
+import "./globals.css";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import SmoothScroll from "@/components/SmoothScroll";
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+export const metadata = {
+  title: "Asaya",
+  description: "Luxury purses store",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html
+      lang="en"
+      className={`${montserrat.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col font-sans">
+        <SmoothScroll>
+          <Navbar />
+          {children}
+          <Footer />
+        </SmoothScroll>
+      </body>
+    </html>
+  );
+}

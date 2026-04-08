@@ -118,7 +118,7 @@ export default function Cart({ isOpen, onClose }) {
                       </button>
                     </div>
                     <span className="text-[#1a1a1a] text-sm font-medium">
-                      ${(item.price * item.quantity).toLocaleString()}
+                      Rs {(item.price * item.quantity).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -147,7 +147,7 @@ export default function Cart({ isOpen, onClose }) {
           <div className="px-8 py-8 border-t border-[#1a1a1a]/10 bg-[#fdfbfb]">
             <div className="flex justify-between items-center mb-6">
               <span className="text-[#1a1a1a] text-sm uppercase tracking-[0.1em] font-medium">Subtotal</span>
-              <span className="text-[#1a1a1a] text-lg font-light">${subtotal.toLocaleString()}</span>
+              <span className="text-[#1a1a1a] text-lg font-light">Rs {subtotal.toLocaleString()}</span>
             </div>
             <p className="text-[#666] text-[10px] tracking-wide mb-6">Shipping and taxes calculated at checkout.</p>
             <Link 

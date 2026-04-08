@@ -5,16 +5,19 @@ import Link from 'next/link';
 import Image from 'next/image'; 
 import Cart from '@/components/Ui/Cart'; 
 import { useCartStore } from '@/store/cartStore'; 
-import { supabase } from '@/lib/supabase'; 
+import { supabase } from '@/lib/supabase'; // Kept ONLY for the logout function
 import { getAllCategories } from '@/services/categoryServices'; 
+import { useUser } from '@/context/UserContext'; // 🌟 Import your global user context
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
+  // 🌟 Grab the user instantly from the global context! No loading, no flickering.
+  const user = useUser();
+  
   // Auth & Dropdown State
-  const [user, setUser] = useState(null);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   // Categories State
@@ -30,7 +33,7 @@ export default function Navbar() {
   useEffect(() => {
     setIsMounted(true);
 
-    // Track scrolling for dynamic navbar border (optional luxury touch)
+    // Track scrolling for dynamic navbar border
     const handleScroll = () => {
       if (window.scrollY > 20) {
         setIsScrolled(true);
@@ -39,12 +42,6 @@ export default function Navbar() {
       }
     };
     window.addEventListener('scroll', handleScroll);
-
-    const fetchSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-    };
-    fetchSession();
 
     // Fetch Categories
     const fetchCategories = async () => {
@@ -58,13 +55,8 @@ export default function Navbar() {
     };
     fetchCategories();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
-
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      authListener.subscription.unsubscribe();
     };
   }, []);
 
@@ -84,6 +76,8 @@ export default function Navbar() {
     try {
       await supabase.auth.signOut();
       setIsProfileDropdownOpen(false); 
+      // Force a hard reload so the Server Components (layout.js) know the cookie is gone
+      window.location.reload(); 
     } catch (error) {
       console.error("Error logging out:", error.message);
     }
@@ -95,7 +89,7 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Main Navbar - Added solid background and dynamic bottom border */}
+      {/* Main Navbar */}
       <nav className={`fixed top-0 left-0 w-full z-40 px-6 md:px-12 py-5 flex items-center justify-between bg-[#fdfbfb] transition-all duration-300 ${isScrolled ? 'border-b border-[#e5e5e5] py-4' : 'border-b border-transparent py-6'}`}>
         
         {/* Left: Logo */}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation'; // <-- Import useSearchParams
+import { useSearchParams } from 'next/navigation'; 
 import Image from 'next/image';
 import Link from 'next/link';
 import AddToCartButton from '../Ui/AddToCart'; 
@@ -11,62 +11,50 @@ const ITEMS_PER_PAGE = 12;
 
 export default function Products({ products = [], categories = [] }) {
   const searchParams = useSearchParams();
-  const categoryFromUrl = searchParams.get('category'); // Gets the '?category=...' from URL
+  const categoryFromUrl = searchParams.get('category'); 
 
-  // Set initial category to the one in the URL if it exists, otherwise "All"
   const [activeCategory, setActiveCategory] = useState(categoryFromUrl || "All");
-  
   const [activeSort, setActiveSort] = useState("Newest Arrivals");
   const [showBestSellers, setShowBestSellers] = useState(false);
   const [showTrending, setShowTrending] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-  // Sync category if the URL changes (e.g., clicking drawer link while already on this page)
   useEffect(() => {
     if (categoryFromUrl) {
       setActiveCategory(categoryFromUrl);
     }
   }, [categoryFromUrl]);
 
-  // Generate the full list of categories with "All" at the top
   const categoryList = useMemo(() => {
     const categoryNames = categories.map(cat => cat.name);
     return ["All", ...categoryNames];
   }, [categories]);
 
-  // Reset to page 1 whenever a filter changes
   useEffect(() => {
     setCurrentPage(1);
   }, [activeCategory, activeSort, showBestSellers, showTrending]);
 
-  // Lock body scroll when mobile filter is open
   useEffect(() => {
     if (isMobileFilterOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [isMobileFilterOpen]);
 
-  // --- FILTERING & SORTING LOGIC (FRONTEND) ---
+  // --- FILTERING & SORTING LOGIC ---
   const filteredAndSortedProducts = useMemo(() => {
     let result = [...products];
 
-    // 1. Category Filter
     if (activeCategory !== "All") {
       result = result.filter((p) => p.categories?.name === activeCategory);
     }
-
-    // 2. Best Seller Filter
     if (showBestSellers) {
       result = result.filter((p) => p.is_best_seller);
     }
-
-    // 3. Trending Filter
     if (showTrending) {
       result = result.filter((p) => p.is_trending);
     }
 
-    // 4. Sorting
     if (activeSort === "Price: Low to High") {
       result.sort((a, b) => a.price - b.price);
     } else if (activeSort === "Price: High to Low") {
@@ -76,7 +64,6 @@ export default function Products({ products = [], categories = [] }) {
     return result;
   }, [products, activeCategory, activeSort, showBestSellers, showTrending]);
 
-  // --- PAGINATION LOGIC ---
   const totalPages = Math.ceil(filteredAndSortedProducts.length / ITEMS_PER_PAGE);
   const currentProducts = filteredAndSortedProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -103,41 +90,27 @@ export default function Products({ products = [], categories = [] }) {
 
       <div className="px-6 md:px-12 lg:px-16 flex flex-col lg:flex-row gap-12 lg:gap-20">
         
-        {/* --- DESKTOP SIDEBAR (FILTERS) --- */}
+        {/* --- DESKTOP SIDEBAR --- */}
         <aside className="hidden lg:block w-1/4 max-w-[280px] shrink-0 sticky top-32 h-fit">
           
-          {/* Featured Checkboxes */}
+          {/* Featured */}
           <div className="mb-10">
             <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">
               Featured
             </h3>
             <div className="flex flex-col gap-4">
               <label className="flex items-center gap-3 group cursor-pointer text-sm font-light">
-                <input 
-                  type="checkbox" 
-                  checked={showBestSellers} 
-                  onChange={() => setShowBestSellers(!showBestSellers)}
-                  className="w-4 h-4 accent-[#1a1a1a] cursor-pointer"
-                />
-                <span className={showBestSellers ? "font-medium" : "text-[#666] group-hover:text-[#1a1a1a]"}>
-                  Best Sellers
-                </span>
+                <input type="checkbox" checked={showBestSellers} onChange={() => setShowBestSellers(!showBestSellers)} className="w-4 h-4 accent-[#1a1a1a] cursor-pointer" />
+                <span className={showBestSellers ? "font-medium" : "text-[#666] group-hover:text-[#1a1a1a]"}>Best Sellers</span>
               </label>
               <label className="flex items-center gap-3 group cursor-pointer text-sm font-light">
-                <input 
-                  type="checkbox" 
-                  checked={showTrending} 
-                  onChange={() => setShowTrending(!showTrending)}
-                  className="w-4 h-4 accent-[#1a1a1a] cursor-pointer"
-                />
-                <span className={showTrending ? "font-medium" : "text-[#666] group-hover:text-[#1a1a1a]"}>
-                  Trending Now
-                </span>
+                <input type="checkbox" checked={showTrending} onChange={() => setShowTrending(!showTrending)} className="w-4 h-4 accent-[#1a1a1a] cursor-pointer" />
+                <span className={showTrending ? "font-medium" : "text-[#666] group-hover:text-[#1a1a1a]"}>Trending Now</span>
               </label>
             </div>
           </div>
 
-          {/* REAL Categories */}
+          {/* Categories */}
           <div className="mb-10">
             <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">
               Categories
@@ -176,15 +149,11 @@ export default function Products({ products = [], categories = [] }) {
           </div>
         </aside>
 
-        {/* --- MAIN PRODUCT GRID AREA --- */}
+        {/* --- MAIN PRODUCT GRID --- */}
         <div className="w-full lg:w-3/4 flex flex-col">
           
-          {/* Top Bar (Mobile Filter Trigger & Result Count) */}
           <div className="flex justify-between items-center mb-8 border-b border-[#1a1a1a]/10 pb-4 lg:border-none lg:pb-0">
-            <button 
-              onClick={() => setIsMobileFilterOpen(true)} 
-              className="lg:hidden flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold"
-            >
+            <button onClick={() => setIsMobileFilterOpen(true)} className="lg:hidden flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" strokeWidth="2" strokeLinecap="round"/></svg>
               Filter & Sort
             </button>
@@ -195,59 +164,115 @@ export default function Products({ products = [], categories = [] }) {
 
           {currentProducts.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-12 md:gap-x-8 md:gap-y-16">
-              {currentProducts.map((product) => (
-                <div key={product.id} className="group relative flex flex-col">
-                  
-                  {/* Visual Content wrapped in a link to Product Details page via SLUG */}
-                  <Link href={`/collections/${product.slug}`} className="flex flex-col flex-1">
-                    <div className="relative w-full aspect-[4/5] bg-[#faeceb]/40 mb-4 overflow-hidden">
-                      <Image
-                        src={product.images?.[0] || "/Hero.png"} 
-                        alt={product.name}
-                        fill
-                        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                        className="object-cover object-center transition-transform duration-[1.5s] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-105"
-                      />
+              {currentProducts.map((product) => {
+                
+                // --- CALCULATE REVIEWS DYNAMICALLY ---
+                const reviews = product.reviews || [];
+                const reviewCount = reviews.length;
+                const avgRating = reviewCount > 0 
+                  ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1) 
+                  : 0;
 
-                      {/* --- UPDATED MINIMAL STATUS BADGES --- */}
+                return (
+                  <div key={product.id} className="group relative flex flex-col h-full">
+                    
+                    {/* --- IMAGE CONTAINER --- */}
+                    <div className="relative w-full aspect-[4/5] bg-[#faeceb]/40 mb-4 overflow-hidden">
+                      {/* Image wrapped in Link */}
+                      <Link href={`/collections/${product.slug}`} className="absolute inset-0 z-0">
+                        <Image
+                          src={product.images?.[0] || "/Hero.png"} 
+                          alt={product.name}
+                          fill
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                          className="object-cover object-center transition-transform duration-[1.5s] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-105"
+                        />
+                      </Link>
+
+                      {/* STATUS BADGES */}
                       <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10 flex flex-col gap-1 items-start pointer-events-none">
                         {product.is_best_seller && (
-                          // Solid charcoal best seller, smaller text
                           <span className="bg-[#1a1a1a] text-[#fdfbfb] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">
                             Best Seller
                           </span>
                         )}
                         {product.is_trending && (
-                          // Glass style trending, smaller text
                           <span className="bg-[#fdfbfb]/80 backdrop-blur-sm text-[#1a1a1a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">
                             Trending
                           </span>
                         )}
                         {product.stock <= 5 && product.stock > 0 && (
-                          // Pale pink background almost sold out, smaller text
                           <span className="bg-[#faeceb] text-[#1a1a1a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">
                             Almost Sold Out
                           </span>
                         )}
                       </div>
+
+                      {/* 🌟 Desktop Quick Add (Positioned inside image at the bottom) */}
+                      <div className="absolute inset-x-0 bottom-0 p-4 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 z-20 hidden lg:block pointer-events-none">
+                        <div className="pointer-events-auto">
+                          <AddToCartButton 
+                            product={{
+                              id: product.id,
+                              name: product.name,
+                              price: product.price,
+                              image: product.images?.[0] || "/Hero.png",
+                            }} 
+                            variant="glass" 
+                            fullWidth={true} 
+                          />
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col items-center text-center flex-1 mb-4 p-1">
-                      <span className="text-[#888] text-[9px] md:text-[10px] uppercase tracking-[0.15em] mb-1 md:mb-1.5 font-medium">
+                    {/* --- TEXT CONTAINER --- */}
+                    <Link href={`/collections/${product.slug}`} className="flex flex-col items-center text-center flex-1 p-1">
+                      <span className="text-[#888] text-[9px] md:text-[10px] uppercase tracking-[0.15em] mb-1 font-medium">
                         {product.categories?.name || "Collection"}
                       </span>
-                      <h3 className="text-[#1a1a1a] text-sm md:text-base font-light tracking-wide mb-1 md:mb-1.5 transition-colors duration-300 group-hover:text-[#666]">
+                      
+                      <h3 className="text-[#1a1a1a] text-sm md:text-base font-light tracking-wide mb-1.5 transition-colors duration-300 group-hover:text-[#666]">
                         {product.name}
                       </h3>
-                      <p className="text-[#4a4a4a] text-xs md:text-sm font-medium">
-                        Rs. {product.price?.toLocaleString()}
-                      </p>
-                    </div>
-                  </Link>
 
-                  {/* Desktop Quick Add (Hover only) */}
-                  <div className="absolute inset-x-0 bottom-[88px] md:bottom-[96px] p-4 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 z-20 hidden lg:block pointer-events-none">
-                    <div className="pointer-events-auto">
+                      {/* REVIEW STARS & COUNT */}
+                      {reviewCount > 0 && (
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <div className="flex gap-0.5">
+                            {[...Array(5)].map((_, i) => (
+                              <svg key={i} className={`w-2.5 h-2.5 ${i < Math.round(avgRating) ? 'fill-[#ebb626]' : 'fill-[#1a1a1a]/15'}`} viewBox="0 0 24 24">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                              </svg>
+                            ))}
+                          </div>
+                          <span className="text-[9px] text-[#888]">({reviewCount})</span>
+                        </div>
+                      )}
+
+                      {/* STOCK URGENCY INDICATOR */}
+                      {product.stock > 0 && product.stock <= 10 && (
+                        <div className="mb-2">
+                          <span className="text-[9px] md:text-[10px] text-[#b33a3a] font-medium tracking-wide">
+                            {product.stock === 1 
+                              ? "Last piece left!" 
+                              : `Only ${product.stock} pieces left!`}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* PRICING */}
+                      <div className="flex items-center justify-center gap-2 text-xs md:text-sm font-medium mt-auto">
+                        <span className="text-[#1a1a1a]">Rs. {product.price?.toLocaleString()}</span>
+                        {product.compare_price && product.compare_price > product.price && (
+                          <span className="text-[#888] line-through font-light text-[10px] md:text-xs">
+                            Rs. {product.compare_price.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+
+                    {/* Mobile Add to Cart (Visible below text on mobile) */}
+                    <div className="lg:hidden mt-4 relative z-20">
                       <AddToCartButton 
                         product={{
                           id: product.id,
@@ -255,28 +280,14 @@ export default function Products({ products = [], categories = [] }) {
                           price: product.price,
                           image: product.images?.[0] || "/Hero.png",
                         }} 
-                        variant="glass" 
-                        fullWidth={true} 
-                      />
-                    </div>
-                  </div>
-
-                  {/* Mobile Add to Cart (Visible below text) */}
-                  <div className="lg:hidden mt-auto relative z-20">
-                    <AddToCartButton 
-                      product={{
-                        id: product.id,
-                        name: product.name,
-                        price: product.price,
-                        image: product.images?.[0] || "/Hero.png",
-                      }} 
                         variant="outline" 
                         className="py-3 text-[9px] tracking-[0.15em]" 
-                    />
-                  </div>
+                      />
+                    </div>
 
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="w-full py-32 flex flex-col items-center justify-center text-center">
@@ -294,7 +305,7 @@ export default function Products({ products = [], categories = [] }) {
             </div>
           )}
 
-          {/* --- ACCURATE PAGINATION --- */}
+          {/* --- PAGINATION --- */}
           {totalPages > 1 && (
             <div className="mt-20 border-t border-[#1a1a1a]/10 pt-10 flex justify-center items-center gap-6">
               <button 
@@ -334,10 +345,9 @@ export default function Products({ products = [], categories = [] }) {
         </div>
       </div>
 
-      {/* --- MOBILE FULL-SCREEN FILTER OVERLAY --- */}
+      {/* --- MOBILE FILTER OVERLAY --- */}
       <div className={`fixed inset-0 z-50 bg-[#fdfbfb] transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] lg:hidden ${isMobileFilterOpen ? 'translate-y-0' : 'translate-y-full'}`}>
         <div className="flex flex-col h-full">
-          
           <div className="flex justify-between items-center px-6 py-5 border-b border-[#1a1a1a]/10">
             <span className="text-xs uppercase tracking-[0.2em] font-bold">Filter & Sort</span>
             <button onClick={() => setIsMobileFilterOpen(false)} className="text-xs uppercase tracking-[0.2em] cursor-pointer font-bold underline">
@@ -346,7 +356,6 @@ export default function Products({ products = [], categories = [] }) {
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-8">
-            
             <div className="mb-10">
               <h3 className="text-[10px] uppercase tracking-[0.2em] text-[#666] mb-6">Featured</h3>
               <div className="flex flex-col gap-6">
@@ -361,7 +370,6 @@ export default function Products({ products = [], categories = [] }) {
               </div>
             </div>
 
-            {/* REAL Categories Mobile */}
             <div className="mb-10">
               <h3 className="text-[10px] uppercase tracking-[0.2em] text-[#666] mb-6">Categories</h3>
               <div className="flex flex-col gap-5">
@@ -403,7 +411,6 @@ export default function Products({ products = [], categories = [] }) {
           </div>
         </div>
       </div>
-
     </div>
   );
 }

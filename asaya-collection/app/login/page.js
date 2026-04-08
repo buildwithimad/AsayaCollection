@@ -13,16 +13,16 @@ export default function LoginPage() {
     setIsMounted(true);
   }, []);
 
-  const publicUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-  const handleGoogleLogin = async () => {
+const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // This redirects the user to their orders page after a successful login
-          redirectTo: `${publicUrl}/orders`,
+          // 🌟 We changed ?next=/orders to ?next=/ 
+          // This tells the callback to send them to the Home Page!
+          redirectTo: `${window.location.origin}/auth/callback?next=/`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

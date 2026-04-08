@@ -1,7 +1,7 @@
 // /services/productService.js
 import { supabase } from "@/lib/supabase";
 
-// ✅ Get products with pagination (16 per page)
+// Get products with pagination (16 per page)
 export async function getAllProducts(page = 1, limit = 16) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -10,7 +10,8 @@ export async function getAllProducts(page = 1, limit = 16) {
     .from("products")
     .select(`
       *,
-      categories(name)
+      categories(name),
+      reviews(rating) 
     `, { count: "exact" })
     .eq("is_published", true)
     .order("created_at", { ascending: false })
@@ -73,8 +74,9 @@ export async function getTrendingProducts() {
   const { data, error } = await supabase
     .from("products")
     .select(`*, categories(name)`)
-    .eq("is_trending", true)
     .eq("is_published", true)
+    // 👇 Automatically include if sales > 10 OR if manually marked as trending
+    .or('is_trending.eq.true,sales_count.gt.10') 
     .order("sales_count", { ascending: false })
     .limit(10);
 

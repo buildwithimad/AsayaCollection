@@ -55,7 +55,7 @@ export default function AdminSidebar({ isOpen, setIsOpen }) {
                 href={link.href}
                 onClick={() => setIsOpen(false)}
                 // Sharp borders, no rounded corners, elegant transitions
-                className={`flex items-center gap-4 px-4 py-3.5 text-xs font-medium uppercase tracking-[0.1em] transition-all duration-300 border-l ${
+                className={`flex items-center rounded-xl gap-4 px-4 py-3.5 text-xs font-medium uppercase tracking-[0.1em] transition-all duration-300  ${
                   isActive 
                     ? 'bg-[#fce3de] border-[#1a1a1a] text-[#1a1a1a]' 
                     : 'border-transparent text-[#666] hover:bg-[#fce3de] hover:text-[#1a1a1a]'

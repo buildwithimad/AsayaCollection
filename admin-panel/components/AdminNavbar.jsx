@@ -54,7 +54,7 @@ export default function AdminNavbar({ setSidebarOpen }) {
         </button>
 
         {/* Action Button */}
-        <button onClick={handleLogout} className="hidden sm:block bg-red-700 cursor-pointer text-white px-5 py-2.5 text-[9px] uppercase tracking-[0.25em] font-bold hover:bg-red-900  transition-colors duration-500">
+        <button onClick={handleLogout} className="hidden sm:block rounded-xl bg-red-700 cursor-pointer text-white px-5 py-2.5 text-[9px] uppercase tracking-[0.25em] font-bold hover:bg-red-900  transition-colors duration-500">
           Logout &rarr;
         </button>
 

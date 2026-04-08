@@ -3,6 +3,8 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SmoothScroll from "@/components/SmoothScroll";
+import { createClient } from '@/lib/supabaseServer';
+import { UserProvider } from '@/context/UserContext';
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -15,18 +17,33 @@ export const metadata = {
   description: "Luxury purses store",
 };
 
-export default function RootLayout({ children }) {
+
+export default async function RootLayout({ children }) {
+
+  // 1. Initialize Supabase securely on the server
+  const supabase = await createClient();
+  
+  // 2. Fetch the active user session
+  const { data: { user } } = await supabase.auth.getUser();
+
+  console.log("Authenticated user from layout:", user); // Debugging: Check if user data is fetched correctly
+
+
   return (
     <html
       lang="en"
       className={`${montserrat.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
+        <UserProvider user={user}>
+
+        
         <SmoothScroll>
           <Navbar />
           {children}
           <Footer />
         </SmoothScroll>
+        </UserProvider>
       </body>
     </html>
   );

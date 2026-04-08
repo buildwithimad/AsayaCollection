@@ -61,13 +61,15 @@ export async function getOrdersByUserId(userId) {
 
 
 
-// ✅ Fetch order securely using BOTH Order Number and Email (For Guests)
+// ✅ Fetch order securely using our Database RPC function (Bypasses RLS safely)
 export async function getOrderByNumberAndEmail(orderNumber, email) {
+  
+  // Notice we use .rpc() instead of .from().select()
   const { data, error } = await supabase
-    .from("orders")
-    .select("*")
-    .ilike("order_number", orderNumber) // case-insensitive
-    .ilike("email", email)              // case-insensitive
+    .rpc("get_guest_order", { 
+      track_order_number: orderNumber, 
+      track_email: email 
+    })
     .maybeSingle();
 
   if (error) throw new Error(error.message);

@@ -13,7 +13,6 @@ const ProductDetailsPage = async ({ params }) => {
   // 2. Now fetch using the resolved slug
   const product = await getProductDetails(slug);
 
-  console.log("Product Details:", product);
 
   if (!product) return notFound();
 

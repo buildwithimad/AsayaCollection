@@ -4,12 +4,18 @@ import { persist } from "zustand/middleware";
 export const useCartStore = create(
   persist(
     (set, get) => ({
+      // --- STATE ---
       cart: [],
+      isCartOpen: false, // 🌟 UI state for the Cart Drawer
 
+      // --- UI ACTIONS ---
+      openCart: () => set({ isCartOpen: true }),
+      closeCart: () => set({ isCartOpen: false }),
+
+      // --- CART ACTIONS ---
       // ➕ Add to cart
       addToCart: (product) => {
         const cart = get().cart;
-
         const exists = cart.find(item => item.id === product.id);
 
         if (exists) {
@@ -54,6 +60,10 @@ export const useCartStore = create(
     }),
     {
       name: "cart-storage", // localStorage key
+      
+      // 🌟 Omit UI state from local storage. 
+      // We only want to save the 'cart' items, not the 'isCartOpen' boolean.
+      partialize: (state) => ({ cart: state.cart }), 
     }
   )
 );

@@ -1,71 +1,102 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation'; 
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import AddToCartButton from '../Ui/AddToCart'; 
+import { getFilteredProductsAction } from '@/app/actions/productServices';
 
 const SORT_OPTIONS = ["Newest Arrivals", "Price: Low to High", "Price: High to Low"];
 const ITEMS_PER_PAGE = 12;
 
-export default function Products({ products = [], categories = [] }) {
+export default function Products({ initialProducts = [], categories = [] }) {
   const searchParams = useSearchParams();
+  const router = useRouter(); 
+  const pathname = usePathname();
   const categoryFromUrl = searchParams.get('category'); 
 
+  // --- STATE MANAGEMENT ---
+  const [products, setProducts] = useState(initialProducts);
   const [activeCategory, setActiveCategory] = useState(categoryFromUrl || "All");
   const [activeSort, setActiveSort] = useState("Newest Arrivals");
   const [showBestSellers, setShowBestSellers] = useState(false);
   const [showTrending, setShowTrending] = useState(false);
+  const [navigatingId, setNavigatingId] = useState(null);
+  
+  const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
+  // Reset navigating state if user uses the browser "Back" button
   useEffect(() => {
-    if (categoryFromUrl) {
-      setActiveCategory(categoryFromUrl);
+    const handlePageShow = (e) => {
+      if (e.persisted) setNavigatingId(null);
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
+
+  const handleCategoryChange = (cat) => {
+    setActiveCategory(cat);
+    
+    // 1. Get the current URL parameters
+    const params = new URLSearchParams(searchParams);
+    
+    // 2. Add or remove the category
+    if (cat === "All") {
+      params.delete('category');
+    } else {
+      params.set('category', cat);
     }
+    
+    // 3. Push the new URL silently
+    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  // Sync initial URL category if it changes
+  useEffect(() => {
+    if (categoryFromUrl) setActiveCategory(categoryFromUrl);
   }, [categoryFromUrl]);
 
-  const categoryList = useMemo(() => {
-    const categoryNames = categories.map(cat => cat.name);
-    return ["All", ...categoryNames];
-  }, [categories]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeCategory, activeSort, showBestSellers, showTrending]);
-
+  // Prevent background scrolling when mobile menu is open
   useEffect(() => {
     if (isMobileFilterOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [isMobileFilterOpen]);
 
-  // --- FILTERING & SORTING LOGIC ---
-  const filteredAndSortedProducts = useMemo(() => {
-    let result = [...products];
-
-    if (activeCategory !== "All") {
-      result = result.filter((p) => p.categories?.name === activeCategory);
+  // --- SERVER ACTION FETCHING LOGIC ---
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const filteredData = await getFilteredProductsAction({
+        category: activeCategory,
+        sort: activeSort,
+        bestSeller: showBestSellers,
+        trending: showTrending
+      });
+      
+      setProducts(filteredData);
+      setCurrentPage(1); // Reset to page 1 whenever filters change
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+    } finally {
+      setLoading(false);
     }
-    if (showBestSellers) {
-      result = result.filter((p) => p.is_best_seller);
-    }
-    if (showTrending) {
-      result = result.filter((p) => p.is_trending);
-    }
+  }, [activeCategory, activeSort, showBestSellers, showTrending]);
 
-    if (activeSort === "Price: Low to High") {
-      result.sort((a, b) => a.price - b.price);
-    } else if (activeSort === "Price: High to Low") {
-      result.sort((a, b) => b.price - a.price);
-    }
+  // Trigger fetch when any filter state changes
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
-    return result;
-  }, [products, activeCategory, activeSort, showBestSellers, showTrending]);
+  // Generate category list for sidebar
+  const categoryList = ["All", ...categories.map(cat => cat.name)];
 
-  const totalPages = Math.ceil(filteredAndSortedProducts.length / ITEMS_PER_PAGE);
-  const currentProducts = filteredAndSortedProducts.slice(
+  // --- PAGINATION (Client-side slicing of fetched results) ---
+  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  const currentProducts = products.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
@@ -79,8 +110,8 @@ export default function Products({ products = [], categories = [] }) {
           <span className="uppercase tracking-[0.3em] text-[#666] text-[10px] sm:text-xs font-medium mb-4 block">
             The Collection
           </span>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight">
-            {activeCategory === "All" ? "All Pieces" : activeCategory}
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight capitalize">
+            {activeCategory === "All" ? "All Pieces" : activeCategory.replace(/-/g, ' ')}
           </h1>
         </div>
         <p className="text-[#666] text-sm font-light max-w-sm hidden md:block">
@@ -95,9 +126,7 @@ export default function Products({ products = [], categories = [] }) {
           
           {/* Featured */}
           <div className="mb-10">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">
-              Featured
-            </h3>
+            <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">Featured</h3>
             <div className="flex flex-col gap-4">
               <label className="flex items-center gap-3 group cursor-pointer text-sm font-light">
                 <input type="checkbox" checked={showBestSellers} onChange={() => setShowBestSellers(!showBestSellers)} className="w-4 h-4 accent-[#1a1a1a] cursor-pointer" />
@@ -112,17 +141,15 @@ export default function Products({ products = [], categories = [] }) {
 
           {/* Categories */}
           <div className="mb-10">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">
-              Categories
-            </h3>
+            <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">Categories</h3>
             <ul className="flex flex-col gap-4">
               {categoryList.map(cat => (
                 <li key={cat}>
                   <button 
-                    onClick={() => setActiveCategory(cat)}
-                    className={`text-sm font-light tracking-wide cursor-pointer transition-colors duration-300 ${activeCategory === cat ? 'text-[#1a1a1a] font-medium underline underline-offset-4' : 'text-[#666] hover:text-[#1a1a1a]'}`}
+                    onClick={() => handleCategoryChange(cat)}
+                    className={`text-sm font-light tracking-wide cursor-pointer transition-colors duration-300 capitalize ${activeCategory === cat ? 'text-[#1a1a1a] font-medium underline underline-offset-4' : 'text-[#666] hover:text-[#1a1a1a]'}`}
                   >
-                    {cat}
+                    {cat.replace(/-/g, ' ')}
                   </button>
                 </li>
               ))}
@@ -131,9 +158,7 @@ export default function Products({ products = [], categories = [] }) {
 
           {/* Sort By */}
           <div>
-            <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">
-              Sort By
-            </h3>
+            <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">Sort By</h3>
             <ul className="flex flex-col gap-4">
               {SORT_OPTIONS.map(opt => (
                 <li key={opt}>
@@ -150,7 +175,7 @@ export default function Products({ products = [], categories = [] }) {
         </aside>
 
         {/* --- MAIN PRODUCT GRID --- */}
-        <div className="w-full lg:w-3/4 flex flex-col">
+        <div className="w-full lg:w-3/4 flex flex-col relative min-h-[50vh]">
           
           <div className="flex justify-between items-center mb-8 border-b border-[#1a1a1a]/10 pb-4 lg:border-none lg:pb-0">
             <button onClick={() => setIsMobileFilterOpen(true)} className="lg:hidden flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold">
@@ -158,198 +183,209 @@ export default function Products({ products = [], categories = [] }) {
               Filter & Sort
             </button>
             <span className="text-[10px] text-[#666] uppercase tracking-widest ml-auto">
-              {filteredAndSortedProducts.length} Results
+              {products.length} Results
             </span>
           </div>
 
-          {currentProducts.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-12 md:gap-x-8 md:gap-y-16">
-              {currentProducts.map((product) => {
-                
-                // --- CALCULATE REVIEWS DYNAMICALLY ---
-                const reviews = product.reviews || [];
-                const reviewCount = reviews.length;
-                const avgRating = reviewCount > 0 
-                  ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1) 
-                  : 0;
+          {/* LOADING SPINNER OVERLAY */}
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-start justify-center bg-[#fdfbfb]/60 backdrop-blur-[2px] pt-20">
+              <div className="w-8 h-8 border-2 border-[#1a1a1a]/20 border-t-[#1a1a1a] rounded-full animate-spin"></div>
+            </div>
+          )}
 
-                return (
-                  <div key={product.id} className="group relative flex flex-col h-full">
-                    
-                    {/* --- IMAGE CONTAINER --- */}
-                    <div className="relative w-full aspect-[4/5] bg-[#faeceb]/40 mb-4 overflow-hidden">
-                      {/* Image wrapped in Link */}
-                      <Link href={`/collections/${product.slug}`} className="absolute inset-0 z-0">
-                        <Image
-                          src={product.images?.[0] || "/Hero.png"} 
-                          alt={product.name}
-                          fill
-                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                          className="object-cover object-center transition-transform duration-[1.5s] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-105"
-                        />
+          <div className={`transition-opacity duration-300 ${loading ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+            {currentProducts.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-12 md:gap-x-8 md:gap-y-16">
+                {currentProducts.map((product) => {
+                  
+                  // --- CALCULATE REVIEWS DYNAMICALLY ---
+                  const reviews = product.reviews || [];
+                  const reviewCount = reviews.length;
+                  const avgRating = reviewCount > 0 
+                    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1) 
+                    : 0;
+
+                  return (
+                    <div key={product.id} className="group relative flex flex-col h-full animate-in fade-in duration-500">
+                      
+                      {/* --- IMAGE CONTAINER --- */}
+                      <div className="relative w-full aspect-[4/5] bg-[#faeceb]/40 mb-4 overflow-hidden">
+                       <Link 
+      href={`/collections/${product.slug || product.id}`} 
+      onClick={() => setNavigatingId(product.id)} // 🌟 Trigger loading state on click
+      className="absolute inset-0 z-0"
+    >
+      <Image
+        src={product.images?.[0] || "/Hero.png"} 
+        alt={product.name}
+        fill
+        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+        className="object-cover object-center transition-transform duration-[1.5s] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-105"
+      />
+      
+      {/* 🌟 THE CLICK-TO-NAVIGATE SPINNER */}
+      {navigatingId === product.id && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#fdfbfb]/50 backdrop-blur-[2px]">
+          <div className="w-8 h-8 border-2 border-[#1a1a1a]/20 border-t-[#1a1a1a] rounded-full animate-spin"></div>
+        </div>
+      )}
+    </Link>
+
+                        {/* STATUS BADGES */}
+                        <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10 flex flex-col gap-1 items-start pointer-events-none">
+                          {product.is_best_seller && (
+                            <span className="bg-[#1a1a1a] text-[#fdfbfb] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">Best Seller</span>
+                          )}
+                          {product.is_trending && (
+                            <span className="bg-[#fdfbfb]/80 backdrop-blur-sm text-[#1a1a1a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">Trending</span>
+                          )}
+                          {product.stock <= 5 && product.stock > 0 && (
+                            <span className="bg-[#faeceb] text-[#1a1a1a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">Almost Sold Out</span>
+                          )}
+                        </div>
+
+                        {/* Desktop Quick Add */}
+                        <div className="absolute inset-x-0 bottom-0 p-4 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 z-20 hidden lg:block pointer-events-none">
+                          <div className="pointer-events-auto">
+                            <AddToCartButton 
+                              product={{
+                                id: product.id,
+                                name: product.name,
+                                price: product.price,
+                                image: product.images?.[0] || "/Hero.png",
+                              }} 
+                              variant="glass" 
+                              fullWidth={true} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* --- TEXT CONTAINER --- */}
+                      <Link href={`/collections/${product.slug || product.id}`}
+                      onClick={() => setNavigatingId(product.id)} // 🌟 Add it here too!
+                       className="flex flex-col items-center text-center flex-1 p-1">
+                        <span className="text-[#888] text-[9px] md:text-[10px] uppercase tracking-[0.15em] mb-1 font-medium capitalize">
+                          {product.categories?.name?.replace(/-/g, ' ') || "Collection"}
+                        </span>
+                        
+                        <h3 className="text-[#1a1a1a] text-sm md:text-base font-light tracking-wide mb-1.5 transition-colors duration-300 group-hover:text-[#666]">
+                          {product.name}
+                        </h3>
+
+                        {/* REVIEW STARS & COUNT */}
+                        {reviewCount > 0 && (
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <div className="flex gap-0.5">
+                              {[...Array(5)].map((_, i) => (
+                                <svg key={i} className={`w-2.5 h-2.5 ${i < Math.round(avgRating) ? 'fill-[#ebb626]' : 'fill-[#1a1a1a]/15'}`} viewBox="0 0 24 24">
+                                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                              ))}
+                            </div>
+                            <span className="text-[9px] text-[#888]">({reviewCount})</span>
+                          </div>
+                        )}
+
+                        {/* STOCK URGENCY INDICATOR */}
+                        {product.stock > 0 && product.stock <= 10 && (
+                          <div className="mb-2">
+                            <span className="text-[9px] md:text-[10px] text-[#b33a3a] font-medium tracking-wide">
+                              {product.stock === 1 ? "Last piece left!" : `Only ${product.stock} pieces left!`}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* PRICING & DISCOUNT */}
+                        <div className="flex items-center justify-center gap-2 text-xs md:text-sm font-medium mt-auto">
+                          <span className="text-[#1a1a1a]">Rs. {product.price?.toLocaleString()}</span>
+                          {product.compare_price && product.compare_price > product.price && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[#888] line-through font-light text-[10px] md:text-xs">
+                                Rs. {product.compare_price.toLocaleString()}
+                              </span>
+                              {product.discount && (
+                                <span className="text-[#b33a3a] font-bold text-[9px] md:text-[10px] tracking-wider">
+                                  -{product.discount}%
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </Link>
 
-                      {/* STATUS BADGES */}
-                      <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10 flex flex-col gap-1 items-start pointer-events-none">
-                        {product.is_best_seller && (
-                          <span className="bg-[#1a1a1a] text-[#fdfbfb] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">
-                            Best Seller
-                          </span>
-                        )}
-                        {product.is_trending && (
-                          <span className="bg-[#fdfbfb]/80 backdrop-blur-sm text-[#1a1a1a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">
-                            Trending
-                          </span>
-                        )}
-                        {product.stock <= 5 && product.stock > 0 && (
-                          <span className="bg-[#faeceb] text-[#1a1a1a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">
-                            Almost Sold Out
-                          </span>
-                        )}
+                      {/* Mobile Add to Cart */}
+                      <div className="lg:hidden mt-4 relative z-20">
+                        <AddToCartButton 
+                          product={{
+                            id: product.id,
+                            name: product.name,
+                            price: product.price,
+                            image: product.images?.[0] || "/Hero.png",
+                          }} 
+                          variant="outline" 
+                          className="py-3 text-[9px] tracking-[0.15em]" 
+                        />
                       </div>
 
-                      {/* 🌟 Desktop Quick Add (Positioned inside image at the bottom) */}
-                      <div className="absolute inset-x-0 bottom-0 p-4 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 z-20 hidden lg:block pointer-events-none">
-                        <div className="pointer-events-auto">
-                          <AddToCartButton 
-                            product={{
-                              id: product.id,
-                              name: product.name,
-                              price: product.price,
-                              image: product.images?.[0] || "/Hero.png",
-                            }} 
-                            variant="glass" 
-                            fullWidth={true} 
-                          />
-                        </div>
-                      </div>
                     </div>
-
-                    {/* --- TEXT CONTAINER --- */}
-                    <Link href={`/collections/${product.slug}`} className="flex flex-col items-center text-center flex-1 p-1">
-                      <span className="text-[#888] text-[9px] md:text-[10px] uppercase tracking-[0.15em] mb-1 font-medium">
-                        {product.categories?.name || "Collection"}
-                      </span>
-                      
-                      <h3 className="text-[#1a1a1a] text-sm md:text-base font-light tracking-wide mb-1.5 transition-colors duration-300 group-hover:text-[#666]">
-                        {product.name}
-                      </h3>
-
-                      {/* REVIEW STARS & COUNT */}
-                      {reviewCount > 0 && (
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <div className="flex gap-0.5">
-                            {[...Array(5)].map((_, i) => (
-                              <svg key={i} className={`w-2.5 h-2.5 ${i < Math.round(avgRating) ? 'fill-[#ebb626]' : 'fill-[#1a1a1a]/15'}`} viewBox="0 0 24 24">
-                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                              </svg>
-                            ))}
-                          </div>
-                          <span className="text-[9px] text-[#888]">({reviewCount})</span>
-                        </div>
-                      )}
-
-                      {/* STOCK URGENCY INDICATOR */}
-                      {product.stock > 0 && product.stock <= 10 && (
-                        <div className="mb-2">
-                          <span className="text-[9px] md:text-[10px] text-[#b33a3a] font-medium tracking-wide">
-                            {product.stock === 1 
-                              ? "Last piece left!" 
-                              : `Only ${product.stock} pieces left!`}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* --- UPDATED PRICING & DISCOUNT --- */}
-                      <div className="flex items-center justify-center gap-2 text-xs md:text-sm font-medium mt-auto">
-                        <span className="text-[#1a1a1a]">Rs. {product.price?.toLocaleString()}</span>
-                        {product.compare_price && product.compare_price > product.price && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[#888] line-through font-light text-[10px] md:text-xs">
-                              Rs. {product.compare_price.toLocaleString()}
-                            </span>
-                            {/* 🌟 USES DB DISCOUNT FIELD */}
-                            {product.discount && (
-                              <span className="text-[#b33a3a] font-bold text-[9px] md:text-[10px] tracking-wider">
-                                -{product.discount}%
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-
-                    {/* Mobile Add to Cart (Visible below text on mobile) */}
-                    <div className="lg:hidden mt-4 relative z-20">
-                      <AddToCartButton 
-                        product={{
-                          id: product.id,
-                          name: product.name,
-                          price: product.price,
-                          image: product.images?.[0] || "/Hero.png",
-                        }} 
-                        variant="outline" 
-                        className="py-3 text-[9px] tracking-[0.15em]" 
-                      />
-                    </div>
-
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="w-full py-32 flex flex-col items-center justify-center text-center">
-              <span className="text-[#666] font-light text-lg tracking-wide mb-4">No pieces found.</span>
-              <button 
-                onClick={() => {
-                  setActiveCategory("All");
-                  setShowBestSellers(false);
-                  setShowTrending(false);
-                }}
-                className="border-b border-[#1a1a1a] pb-1 text-[#1a1a1a] text-xs uppercase tracking-[0.2em] font-medium hover:opacity-60 transition-opacity"
-              >
-                Clear Filters
-              </button>
-            </div>
-          )}
-
-          {/* --- PAGINATION --- */}
-          {totalPages > 1 && (
-            <div className="mt-20 border-t border-[#1a1a1a]/10 pt-10 flex justify-center items-center gap-6">
-              <button 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="text-[10px] uppercase tracking-[0.2em] font-bold disabled:opacity-20 hover:opacity-60 transition-opacity cursor-pointer disabled:cursor-not-allowed"
-              >
-                Prev
-              </button>
-              
-              <div className="flex gap-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button 
-                    key={page} 
-                    onClick={() => setCurrentPage(page)} 
-                    className={`w-8 h-8 flex items-center justify-center rounded-full text-xs transition-all duration-300 ${
-                      currentPage === page 
-                      ? 'bg-[#1a1a1a] text-white font-medium' 
-                      : 'text-[#666] hover:bg-[#faeceb] font-light cursor-pointer'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                  );
+                })}
               </div>
+            ) : (
+              <div className="w-full py-32 flex flex-col items-center justify-center text-center">
+                <span className="text-[#666] font-light text-lg tracking-wide mb-4">No pieces found.</span>
+                <button 
+                  onClick={() => {
+                    handleCategoryChange("All");
+                    setShowBestSellers(false);
+                    setShowTrending(false);
+                  }}
+                  className="border-b border-[#1a1a1a] pb-1 text-[#1a1a1a] text-xs uppercase tracking-[0.2em] font-medium hover:opacity-60 transition-opacity"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            )}
 
-              <button 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="text-[10px] uppercase tracking-[0.2em] font-bold disabled:opacity-20 hover:opacity-60 transition-opacity cursor-pointer disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          )}
+            {/* --- PAGINATION --- */}
+            {totalPages > 1 && (
+              <div className="mt-20 border-t border-[#1a1a1a]/10 pt-10 flex justify-center items-center gap-6">
+                <button 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="text-[10px] uppercase tracking-[0.2em] font-bold disabled:opacity-20 hover:opacity-60 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                
+                <div className="flex gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button 
+                      key={page} 
+                      onClick={() => setCurrentPage(page)} 
+                      className={`w-8 h-8 flex items-center justify-center rounded-full text-xs transition-all duration-300 ${
+                        currentPage === page 
+                        ? 'bg-[#1a1a1a] text-white font-medium' 
+                        : 'text-[#666] hover:bg-[#faeceb] font-light cursor-pointer'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
 
+                <button 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="text-[10px] uppercase tracking-[0.2em] font-bold disabled:opacity-20 hover:opacity-60 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -384,10 +420,10 @@ export default function Products({ products = [], categories = [] }) {
                 {categoryList.map(cat => (
                   <button 
                     key={cat} 
-                    onClick={() => setActiveCategory(cat)} 
-                    className={`text-left text-2xl cursor-pointer font-light tracking-wide ${activeCategory === cat ? 'text-[#1a1a1a] font-medium underline underline-offset-4' : 'text-[#666]'}`}
+                    onClick={() => handleCategoryChange(cat)} 
+                    className={`text-left text-2xl cursor-pointer font-light tracking-wide capitalize ${activeCategory === cat ? 'text-[#1a1a1a] font-medium underline underline-offset-4' : 'text-[#666]'}`}
                   >
-                    {cat}
+                    {cat.replace(/-/g, ' ')}
                   </button>
                 ))}
               </div>
@@ -414,7 +450,7 @@ export default function Products({ products = [], categories = [] }) {
               onClick={() => setIsMobileFilterOpen(false)} 
               className="w-full bg-[#1a1a1a] text-white py-5 uppercase tracking-[0.2em] text-xs font-bold hover:bg-[#333] transition-colors"
             >
-              Show {filteredAndSortedProducts.length} Results
+              Show {products.length} Results
             </button>
           </div>
         </div>

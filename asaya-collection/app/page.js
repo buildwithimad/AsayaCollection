@@ -20,16 +20,15 @@ export default async function Home() {
   ]);
 
 
- console.log("All Categories:", categories); // Debugging log to verify categories are fetched correctly
 
   return (
     <main>
       <HeroSection />
       <TrendingSection trendingProducts={trendingProducts} />
+      <CategoriesSection categories={categories} />
       <FeaturedProducts featuredProducts={featuredProducts} />
       <BestSellers bestSellers={bestSellers} />
       <WhyChooseUs />
-      <CategoriesSection categories={categories} />
       <BrandStory />
     </main>
   );

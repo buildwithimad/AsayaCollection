@@ -260,13 +260,21 @@ export default function Products({ products = [], categories = [] }) {
                         </div>
                       )}
 
-                      {/* PRICING */}
+                      {/* --- UPDATED PRICING & DISCOUNT --- */}
                       <div className="flex items-center justify-center gap-2 text-xs md:text-sm font-medium mt-auto">
                         <span className="text-[#1a1a1a]">Rs. {product.price?.toLocaleString()}</span>
                         {product.compare_price && product.compare_price > product.price && (
-                          <span className="text-[#888] line-through font-light text-[10px] md:text-xs">
-                            Rs. {product.compare_price.toLocaleString()}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[#888] line-through font-light text-[10px] md:text-xs">
+                              Rs. {product.compare_price.toLocaleString()}
+                            </span>
+                            {/* 🌟 USES DB DISCOUNT FIELD */}
+                            {product.discount && (
+                              <span className="text-[#b33a3a] font-bold text-[9px] md:text-[10px] tracking-wider">
+                                -{product.discount}%
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </Link>

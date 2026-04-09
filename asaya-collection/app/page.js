@@ -7,15 +7,20 @@ import TrendingSection from "@/components/Home/Trending";
 import WhyChooseUs from "@/components/Home/WhyChooseUs";
 
 import { getTrendingProducts, getFeaturedProducts, getBestSellers } from "@/services/productServices";
+import { getAllCategories } from "@/services/categoryServices";
 
 export default async function Home() {
 
 
-  const [trendingProducts, featuredProducts, bestSellers] = await Promise.all([
+  const [trendingProducts, featuredProducts, bestSellers, categories] = await Promise.all([
     getTrendingProducts(),
     getFeaturedProducts(),
-    getBestSellers()
+    getBestSellers(),
+    getAllCategories()
   ]);
+
+
+ console.log("All Categories:", categories); // Debugging log to verify categories are fetched correctly
 
   return (
     <main>
@@ -24,7 +29,7 @@ export default async function Home() {
       <FeaturedProducts featuredProducts={featuredProducts} />
       <BestSellers bestSellers={bestSellers} />
       <WhyChooseUs />
-      <CategoriesSection />
+      <CategoriesSection categories={categories} />
       <BrandStory />
     </main>
   );

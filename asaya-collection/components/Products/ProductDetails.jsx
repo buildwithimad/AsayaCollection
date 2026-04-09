@@ -126,29 +126,38 @@ export default function ProductDetails({ product }) {
                 </div>
               )}
               
-              {/* --- PRICING & STOCK --- */}
+              {/* --- UPDATED PRICING, DISCOUNT & STOCK --- */}
               <div className="flex flex-col gap-2 mb-8">
                 <div className="flex items-baseline gap-3">
                   <p className="text-2xl md:text-3xl font-normal text-[#1a1a1a]">
                     Rs. {product.price?.toLocaleString()}
                   </p>
+                  
                   {product.compare_price && product.compare_price > product.price && (
-                    <p className="text-sm text-[#888] line-through font-light">
-                      Rs. {product.compare_price.toLocaleString()}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-sm text-[#888] line-through font-light">
+                        Rs. {product.compare_price.toLocaleString()}
+                      </p>
+                      {/* 🌟 USES DB DISCOUNT FIELD */}
+                      {product.discount && (
+                        <span className="bg-[#b33a3a]/5 border border-[#b33a3a]/20 text-[#b33a3a] px-2 py-1 text-[9px] uppercase tracking-[0.2em] font-bold">
+                          {product.discount}% OFF
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
 
                 {/* Dynamic Stock Urgency */}
                 {product.stock > 0 && product.stock <= 10 && (
-                  <span className="text-xs text-[#b33a3a] font-medium tracking-wide">
+                  <span className="text-xs text-[#b33a3a] font-medium tracking-wide mt-1">
                     {product.stock === 1 
                       ? "Last piece left in stock!" 
                       : `Only ${product.stock} pieces left in stock!`}
                   </span>
                 )}
                 {product.stock === 0 && (
-                  <span className="text-xs text-[#888] font-medium tracking-wide uppercase">
+                  <span className="text-xs text-[#888] font-medium tracking-wide uppercase mt-1">
                     Currently Out of Stock
                   </span>
                 )}

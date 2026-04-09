@@ -1,6 +1,7 @@
 'use client';
 
 import Image from "next/image";
+import Link from "next/link";
 
 export default function BrandStory() {
   return (
@@ -46,11 +47,11 @@ export default function BrandStory() {
             We source only the finest, ethically produced materials, ensuring that your bag not only looks exquisite but stands the test of time. Conscious luxury, crafted for the modern muse.
           </p>
           
-          <button className="group relative inline-flex items-center justify-center text-[#1a1a1a] text-xs uppercase tracking-[0.2em] font-medium transition-all">
+          <Link href="/about" className="group relative inline-flex items-center justify-center text-[#1a1a1a] text-xs uppercase tracking-[0.2em] font-medium transition-all">
             <span className="pb-2 border-b border-[#1a1a1a]/30 group-hover:border-[#1a1a1a] transition-colors duration-300">
               Read Our Story
             </span>
-          </button>
+          </Link  >
           
         </div>
 

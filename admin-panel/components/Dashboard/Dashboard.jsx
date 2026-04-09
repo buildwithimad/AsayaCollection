@@ -132,7 +132,8 @@ export default function DashboardHome({ kpis, revenueData, orderStatusData, topP
           </div>
           
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            {/* 🌟 FIX: Changed height="100%" to height={300} */}
+            <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -159,7 +160,8 @@ export default function DashboardHome({ kpis, revenueData, orderStatusData, topP
           
           <div className="flex-1 flex flex-col justify-center items-center">
             <div className="h-[200px] w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
+              {/* 🌟 FIX: Changed height="100%" to height={200} */}
+              <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={orderStatusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
                     {orderStatusData.map((entry, index) => (

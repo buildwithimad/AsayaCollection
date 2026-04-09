@@ -26,9 +26,6 @@ export default async function RootLayout({ children }) {
   // 2. Fetch the active user session
   const { data: { user } } = await supabase.auth.getUser();
 
-  console.log("Authenticated user from layout:", user); // Debugging: Check if user data is fetched correctly
-
-
   return (
     <html
       lang="en"

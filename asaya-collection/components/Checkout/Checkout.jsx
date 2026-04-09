@@ -32,6 +32,9 @@ export default function Checkout() {
   const [shippingMethod, setShippingMethod] = useState('standard');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // --- ERROR STATE ---
+  const [errors, setErrors] = useState({});
+
   // --- SUCCESS STATE ---
   const [isSuccess, setIsSuccess] = useState(false);
   const [completedOrderNumber, setCompletedOrderNumber] = useState('');
@@ -56,9 +59,52 @@ export default function Checkout() {
   const shippingCost = shippingMethod === 'express' ? 500 : 250; 
   const total = subtotal + shippingCost;
 
+  // --- HELPER: CLEAR ERROR ON TYPE ---
+  const handleInputChange = (setter, field) => (e) => {
+    setter(e.target.value);
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  // --- VALIDATION LOGIC ---
+  const validateForm = () => {
+    const newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    // Pakistani Phone Logic (Stripping spaces/dashes first)
+    const phoneClean = phone.replace(/\D/g, '');
+    const phoneRegex = /^(923\d{9}|03\d{9}|3\d{9})$/;
+
+    if (!email || !emailRegex.test(email)) newErrors.email = "Please enter a valid email address.";
+    if (!firstName.trim()) newErrors.firstName = "First name is required.";
+    if (!lastName.trim()) newErrors.lastName = "Last name is required.";
+    if (!address.trim()) newErrors.address = "Address is required.";
+    if (!city.trim()) newErrors.city = "City is required.";
+    if (!province) newErrors.province = "Please select a province.";
+    if (!zipcode.trim()) newErrors.zipcode = "Postal code is required.";
+    
+    if (!phone) {
+      newErrors.phone = "Phone number is required.";
+    } else if (!phoneRegex.test(phoneClean)) {
+      newErrors.phone = "Please enter a valid Pakistani number (e.g. 03XXXXXXXXX).";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   // --- HANDLE ORDER SUBMISSION ---
   const handleCheckout = async (e) => {
     e.preventDefault();
+    
+    // 🌟 Check validations before submitting
+    if (!validateForm()) {
+      // Scroll to top to ensure user sees errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return; 
+    }
+
     setIsSubmitting(true);
 
     const formData = {
@@ -173,16 +219,21 @@ export default function Checkout() {
                   )}
                 </div>
                 <div className="space-y-4">
-                  <input 
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email address" 
-                    className={`w-full bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none ${userId ? 'text-[#666] cursor-not-allowed' : ''}`}
-                    required
-                    readOnly={!!userId}
-                  />
-                  <label className="flex items-center gap-3 cursor-pointer">
+                  <div className="w-full">
+                    <input 
+                      type="email" 
+                      value={email}
+                      onChange={handleInputChange(setEmail, 'email')}
+                      placeholder="Email address" 
+                      className={`w-full bg-transparent border px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none transition-colors rounded-none 
+                        ${errors.email ? 'border-[#b33a3a] focus:border-[#b33a3a]' : 'border-[#1a1a1a]/20 focus:border-[#1a1a1a]'}
+                        ${userId ? 'text-[#666] cursor-not-allowed' : ''}`}
+                      readOnly={!!userId}
+                    />
+                    {errors.email && <span className="text-[#b33a3a] text-[9px] uppercase tracking-widest font-bold mt-1.5 block">{errors.email}</span>}
+                  </div>
+
+                  <label className="flex items-center gap-3 cursor-pointer w-fit">
                     <input type="checkbox" className="w-4 h-4 accent-[#1a1a1a]" />
                     <span className="text-xs text-[#666] font-light">Email me with news and offers</span>
                   </label>
@@ -205,52 +256,76 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  <input 
-                    type="text" 
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="First name" 
-                    className="col-span-1 bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none"
-                    required
-                  />
-                  <input 
-                    type="text" 
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Last name" 
-                    className="col-span-1 bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none"
-                    required
-                  />
-                  <input 
-                    type="text" 
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Address (House/Street/Area)" 
-                    className="col-span-2 bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none"
-                    required
-                  />
-                  <input 
-                    type="text" 
-                    value={landmark}
-                    onChange={(e) => setLandmark(e.target.value)}
-                    placeholder="Apartment, suite, block, landmark (optional)" 
-                    className="col-span-2 bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none"
-                  />
-                  <input 
-                    type="text" 
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="City" 
-                    className="col-span-1 sm:col-span-2 md:col-span-1 bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none"
-                    required
-                  />
+                  {/* First Name */}
+                  <div className="col-span-1">
+                    <input 
+                      type="text" 
+                      value={firstName}
+                      onChange={handleInputChange(setFirstName, 'firstName')}
+                      placeholder="First name" 
+                      className={`w-full bg-transparent border px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none transition-colors rounded-none 
+                        ${errors.firstName ? 'border-[#b33a3a] focus:border-[#b33a3a]' : 'border-[#1a1a1a]/20 focus:border-[#1a1a1a]'}`}
+                    />
+                    {errors.firstName && <span className="text-[#b33a3a] text-[9px] uppercase tracking-widest font-bold mt-1.5 block">{errors.firstName}</span>}
+                  </div>
+
+                  {/* Last Name */}
+                  <div className="col-span-1">
+                    <input 
+                      type="text" 
+                      value={lastName}
+                      onChange={handleInputChange(setLastName, 'lastName')}
+                      placeholder="Last name" 
+                      className={`w-full bg-transparent border px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none transition-colors rounded-none 
+                        ${errors.lastName ? 'border-[#b33a3a] focus:border-[#b33a3a]' : 'border-[#1a1a1a]/20 focus:border-[#1a1a1a]'}`}
+                    />
+                    {errors.lastName && <span className="text-[#b33a3a] text-[9px] uppercase tracking-widest font-bold mt-1.5 block">{errors.lastName}</span>}
+                  </div>
+
+                  {/* Address */}
+                  <div className="col-span-2">
+                    <input 
+                      type="text" 
+                      value={address}
+                      onChange={handleInputChange(setAddress, 'address')}
+                      placeholder="Address (House/Street/Area)" 
+                      className={`w-full bg-transparent border px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none transition-colors rounded-none 
+                        ${errors.address ? 'border-[#b33a3a] focus:border-[#b33a3a]' : 'border-[#1a1a1a]/20 focus:border-[#1a1a1a]'}`}
+                    />
+                    {errors.address && <span className="text-[#b33a3a] text-[9px] uppercase tracking-widest font-bold mt-1.5 block">{errors.address}</span>}
+                  </div>
+
+                  {/* Landmark */}
+                  <div className="col-span-2">
+                    <input 
+                      type="text" 
+                      value={landmark}
+                      onChange={(e) => setLandmark(e.target.value)}
+                      placeholder="Apartment, suite, block, landmark (optional)" 
+                      className="w-full bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none"
+                    />
+                  </div>
+
+                  {/* City */}
+                  <div className="col-span-1 sm:col-span-2 md:col-span-1">
+                    <input 
+                      type="text" 
+                      value={city}
+                      onChange={handleInputChange(setCity, 'city')}
+                      placeholder="City" 
+                      className={`w-full bg-transparent border px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none transition-colors rounded-none 
+                        ${errors.city ? 'border-[#b33a3a] focus:border-[#b33a3a]' : 'border-[#1a1a1a]/20 focus:border-[#1a1a1a]'}`}
+                    />
+                    {errors.city && <span className="text-[#b33a3a] text-[9px] uppercase tracking-widest font-bold mt-1.5 block">{errors.city}</span>}
+                  </div>
                   
+                  {/* Province */}
                   <div className="col-span-1 sm:col-span-1 md:col-span-1 relative">
                     <select 
-                      required
                       value={province}
-                      onChange={(e) => setProvince(e.target.value)}
-                      className="w-full bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light text-[#1a1a1a] focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none appearance-none cursor-pointer invalid:text-[#666]/60"
+                      onChange={handleInputChange(setProvince, 'province')}
+                      className={`w-full bg-transparent border px-4 py-3.5 text-sm font-light text-[#1a1a1a] focus:outline-none transition-colors rounded-none appearance-none cursor-pointer invalid:text-[#666]/60
+                        ${errors.province ? 'border-[#b33a3a] focus:border-[#b33a3a]' : 'border-[#1a1a1a]/20 focus:border-[#1a1a1a]'}`}
                     >
                       <option value="" disabled hidden>Province</option>
                       <option value="Punjab">Punjab</option>
@@ -264,23 +339,35 @@ export default function Checkout() {
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                       <svg className="w-4 h-4 stroke-[#1a1a1a]" fill="none" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
                     </div>
+                    {errors.province && <span className="text-[#b33a3a] text-[9px] uppercase tracking-widest font-bold mt-1.5 block">{errors.province}</span>}
                   </div>
 
-                  <input 
-                    type="text" 
-                    value={zipcode}
-                    onChange={(e) => setZipcode(e.target.value)}
-                    placeholder="Postal Code (Optional)" 
-                    className="col-span-2 sm:col-span-1 md:col-span-1 bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none"
-                  />
-                  <input 
-                    type="tel" 
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Phone (e.g. 0300 1234567)" 
-                    className="col-span-2 sm:col-span-1 md:col-span-1 bg-transparent border border-[#1a1a1a]/20 px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none focus:border-[#1a1a1a] transition-colors rounded-none"
-                    required
-                  />
+                  {/* Zipcode */}
+                  <div className="col-span-2 sm:col-span-1 md:col-span-1">
+                    <input 
+                      type="text" 
+                      value={zipcode}
+                      onChange={handleInputChange(setZipcode, 'zipcode')}
+                      placeholder="Postal Code" 
+                      className={`w-full bg-transparent border px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none transition-colors rounded-none 
+                        ${errors.zipcode ? 'border-[#b33a3a] focus:border-[#b33a3a]' : 'border-[#1a1a1a]/20 focus:border-[#1a1a1a]'}`}
+                    />
+                    {errors.zipcode && <span className="text-[#b33a3a] text-[9px] uppercase tracking-widest font-bold mt-1.5 block">{errors.zipcode}</span>}
+                  </div>
+
+                  {/* Phone */}
+                  <div className="col-span-2 sm:col-span-1 md:col-span-1">
+                    <input 
+                      type="tel" 
+                      value={phone}
+                      onChange={handleInputChange(setPhone, 'phone')}
+                      placeholder="WhatsApp Phone no" 
+                      className={`w-full bg-transparent border px-4 py-3.5 text-sm font-light placeholder:text-[#666]/60 focus:outline-none transition-colors rounded-none 
+                        ${errors.phone ? 'border-[#b33a3a] focus:border-[#b33a3a]' : 'border-[#1a1a1a]/20 focus:border-[#1a1a1a]'}`}
+                    />
+                    {errors.phone && <span className="text-[#b33a3a] text-[9px] uppercase tracking-widest font-bold mt-1.5 block">{errors.phone}</span>}
+                  </div>
+
                 </div>
               </section>
 
@@ -350,7 +437,7 @@ export default function Checkout() {
                 <button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="w-full bg-[#1a1a1a] text-[#fdfbfb] py-5 text-xs uppercase tracking-[0.2em] font-medium hover:bg-[#333] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#1a1a1a] text-[#fdfbfb] cursor-pointer py-5 text-xs uppercase tracking-[0.2em] font-medium hover:bg-[#333] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Processing Order...' : 'Confirm Order'}
                 </button>

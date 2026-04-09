@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-export async function middleware(request) {
+// 🌟 Added "default" here to guarantee Next.js finds it
+export default async function proxy(request) {
   let response = NextResponse.next({
     request: { headers: request.headers },
   });
@@ -15,7 +16,7 @@ export async function middleware(request) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
@@ -31,6 +32,7 @@ export async function middleware(request) {
   return response;
 }
 
+// Keep the matcher config exactly the same (Next.js requires this to be a named export)
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

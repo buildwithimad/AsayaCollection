@@ -4,10 +4,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useUser } from '@/context/userContext'; // 🌟 Import the custom hook to access user data
+import { useState } from 'react';
 
 export default function AdminSidebar({ isOpen, setIsOpen }) {
   const pathname = usePathname();
   const user = useUser(); // 🌟 Use the custom hook to access user data
+  const [isNavigating, setIsNavigating] = useState(false);
 
 
  const navLinks = [
@@ -85,22 +87,24 @@ export default function AdminSidebar({ isOpen, setIsOpen }) {
           {navLinks.map((link) => {
             const isActive = pathname.startsWith(link.href);
             return (
-              <Link 
-                key={link.name} 
-                href={link.href}
-                onClick={() => setIsOpen(false)}
-                // Sharp borders, no rounded corners, elegant transitions
-                className={`flex items-center rounded-xl gap-4 px-4 py-3.5 text-xs font-medium uppercase tracking-[0.1em] transition-all duration-300  ${
-                  isActive 
-                    ? 'bg-[#fce3de] border-[#1a1a1a] text-[#1a1a1a]' 
-                    : 'border-transparent text-[#666] hover:bg-[#fce3de] hover:text-[#1a1a1a]'
-                }`}
-              >
-                <svg className="w-[18px] h-[18px] stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="1.2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d={link.icon} />
-                </svg>
-                {link.name}
-              </Link>
+             <Link 
+  key={link.name} 
+  href={link.href}
+  onClick={() => {
+    setIsOpen(false);
+    if (pathname !== link.href) setIsNavigating(true); // 🌟 Trigger feedback
+  }}
+  className={`flex items-center rounded-xl gap-4 px-4 py-3.5 text-xs font-medium uppercase tracking-[0.1em] transition-all duration-300 ${
+    isActive 
+      ? 'bg-[#fce3de] text-[#1a1a1a]' 
+      : 'text-[#666] hover:bg-[#fce3de] hover:text-[#1a1a1a]'
+  } ${isNavigating ? 'cursor-pointer opacity-70' : 'cursor-pointer'}`} // 🌟 Change cursor
+>
+  <svg className="w-[18px] h-[18px] stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="1.2">
+    <path strokeLinecap="round" strokeLinejoin="round" d={link.icon} />
+  </svg>
+  {link.name}
+</Link>
             );
           })}
         </nav>

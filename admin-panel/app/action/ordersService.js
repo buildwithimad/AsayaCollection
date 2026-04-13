@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabaseServer';
 
 export async function getOrders({ page = 1, search = '', startDate = '', endDate = '' }) {
   const supabase = await createClient();
-  const limit = 20;
+  const limit = 16;
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 

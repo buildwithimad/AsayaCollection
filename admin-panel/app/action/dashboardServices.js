@@ -13,21 +13,22 @@ export async function getDashboardData() {
 
   // --- KPI CALCULATIONS ---
   let totalRevenue = 0;
-  const uniqueCustomers = new Set();
+  const uniqueCustomersSet = new Set(); 
   
   validOrders.forEach(order => {
     if (order.status === 'Completed' || order.status === 'Delivered') {
       totalRevenue += order.total_amount || 0;
     }
-    if (order.email || order.customer_email) {
-      uniqueCustomers.add(order.email || order.customer_email);
-    }
+    
+    // 🌟 Make sure we catch EVERY unique person, even if they used a phone number instead of an email
+    const uniqueId = (order.email || order.customer_email || order.phone || order.id).toString().toLowerCase();
+    uniqueCustomersSet.add(uniqueId);
   });
 
   const kpis = {
     totalRevenue,
     totalOrders: validOrders.length,
-    activeCustomers: uniqueCustomers.size,
+    uniqueCustomers: uniqueCustomersSet.size, // 🌟 FIX: Name changed to match the frontend
     activeProducts: activeProductsCount || 0
   };
 

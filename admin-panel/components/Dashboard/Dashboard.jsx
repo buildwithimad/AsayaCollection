@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -28,6 +28,29 @@ export default function DashboardHome({ kpis, revenueData, orderStatusData, topP
 
   const formatMoney = (amount) => new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', maximumFractionDigits: 0 }).format(amount);
 
+  // 🌟 ACCURATE CHART FILTERING LOGIC
+  const filteredRevenueData = useMemo(() => {
+    if (!revenueData || revenueData.length === 0) return [];
+    
+    // Determine how many data points to show based on the total length of the data array
+    const totalPoints = revenueData.length;
+
+    if (revenueFilter === '1M') {
+      // Show the last ~8% of data (1 month out of 12). 
+      // Math.max(2) ensures the area chart has at least 2 points to draw a line!
+      const sliceCount = Math.max(2, Math.ceil(totalPoints / 12));
+      return revenueData.slice(-sliceCount);
+    } 
+    else if (revenueFilter === '6M') {
+      // Show the last 50% of the data (6 months out of 12)
+      const sliceCount = Math.max(2, Math.ceil(totalPoints / 2));
+      return revenueData.slice(-sliceCount);
+    }
+    
+    // '1Y' - Show everything
+    return revenueData;
+  }, [revenueData, revenueFilter]);
+
   return (
     <div className="min-h-screen p-4 md:p-8 font-sans font-light text-slate-700 flex flex-col gap-8 custom-scrollbar">
       
@@ -52,7 +75,6 @@ export default function DashboardHome({ kpis, revenueData, orderStatusData, topP
             <div className="w-10 h-10 rounded-full bg-[#fdfaf9] border border-[#fce3de] flex items-center justify-center">
               <svg className="w-5 h-5 text-[#fa8791]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
-            {/* Kept static percentage as real calculation requires previous month complex comparison */}
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
               +14.5% 
@@ -78,20 +100,20 @@ export default function DashboardHome({ kpis, revenueData, orderStatusData, topP
           <h3 className="text-3xl font-serif text-slate-900 relative z-10">{kpis.totalOrders}</h3>
         </div>
 
-        {/* KPI: Active Customers */}
+        {/* KPI: Unique Customers */}
         <div className="bg-white border border-[#fce3de]/50 p-6 rounded-[2rem] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute -right-6 -top-6 w-24 h-24 bg-[#fce3de]/20 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
           <div className="flex justify-between items-start mb-4 relative z-10">
             <div className="w-10 h-10 rounded-full bg-[#fdfaf9] border border-[#fce3de] flex items-center justify-center">
               <svg className="w-5 h-5 text-[#fa8791]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
             </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-full">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" /></svg>
-              -2.4%
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+              Steady
             </span>
           </div>
-          <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-slate-400 mb-1 relative z-10">Total Clients</p>
-          <h3 className="text-3xl font-serif text-slate-900 relative z-10">{kpis.activeCustomers}</h3>
+          <p className="text-[10px] uppercase tracking-[0.2em] font-semibold text-slate-400 mb-1 relative z-10">Unique Customers</p>
+          <h3 className="text-3xl font-serif text-slate-900 relative z-10">{kpis.uniqueCustomers}</h3>
         </div>
 
         {/* KPI: Catalog Items */}
@@ -123,7 +145,7 @@ export default function DashboardHome({ kpis, revenueData, orderStatusData, topP
                 <button 
                   key={filter}
                   onClick={() => setRevenueFilter(filter)}
-                  className={`px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-colors ${revenueFilter === filter ? 'bg-white text-slate-900 shadow-sm border border-[#fce3de]/50' : 'text-slate-400 hover:text-slate-600'}`}
+                  className={`px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-colors cursor-pointer ${revenueFilter === filter ? 'bg-white text-slate-900 shadow-sm border border-[#fce3de]/50' : 'text-slate-400 hover:text-slate-600'}`}
                 >
                   {filter}
                 </button>
@@ -132,9 +154,9 @@ export default function DashboardHome({ kpis, revenueData, orderStatusData, topP
           </div>
           
           <div className="h-[300px] w-full">
-            {/* 🌟 FIX: Changed height="100%" to height={300} */}
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              {/* 🌟 FIX: Updated data source to filteredRevenueData */}
+              <AreaChart data={filteredRevenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#fa8791" stopOpacity={0.3}/>
@@ -160,7 +182,6 @@ export default function DashboardHome({ kpis, revenueData, orderStatusData, topP
           
           <div className="flex-1 flex flex-col justify-center items-center">
             <div className="h-[200px] w-full relative">
-              {/* 🌟 FIX: Changed height="100%" to height={200} */}
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie data={orderStatusData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">

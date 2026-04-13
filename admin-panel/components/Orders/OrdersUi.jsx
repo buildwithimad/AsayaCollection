@@ -28,7 +28,7 @@ export default function OrdersUI({
   const [isDeleting, setIsDeleting] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(null); // 🌟 Tracks which order is updating
 
-  const ITEMS_PER_PAGE = 20;
+  const ITEMS_PER_PAGE = 16;
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   const updateFilters = (newPage = 1) => {
@@ -137,7 +137,7 @@ export default function OrdersUI({
             <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className={inputStyles} />
           </div>
           <div className="flex gap-3 w-full lg:w-auto">
-            <button type="submit" className="bg-black text-white px-8 py-4 text-xs font-medium uppercase tracking-[0.1em] hover:bg-[#fa8791] transition-all duration-300 rounded-2xl cursor-pointer shadow-lg shadow-black/10 active:scale-95">Filter</button>
+            <button type="submit" className="bg-[#fce3de] text-slate-700 px-8 py-4 text-xs font-medium uppercase tracking-[0.1em] hover:bg-[#f8cfc9] transition-all duration-300 rounded-2xl cursor-pointer  active:scale-95">Filter</button>
             {(currentSearch || currentStart || currentEnd) && (
               <button type="button" onClick={clearFilters} className="bg-white text-slate-600 border border-slate-200 px-6 py-4 text-xs font-medium uppercase tracking-widest hover:bg-slate-50 transition-colors rounded-2xl cursor-pointer active:scale-95">Clear</button>
             )}

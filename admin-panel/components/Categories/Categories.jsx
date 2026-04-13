@@ -149,7 +149,7 @@ export default function CategoriesUI({ initialCategories, totalCount, currentPag
           <p className="text-sm text-slate-500 mt-1 font-light">Curate your silhouette collections</p>
         </div>
         {isSuperAdmin && (
-          <button onClick={openAddModal} className="bg-black text-white px-6 py-3.5 text-xs font-medium uppercase tracking-widest rounded-2xl hover:bg-[#fa8791] transition-all cursor-pointer shadow-lg shadow-black/10 active:scale-95">
+          <button onClick={openAddModal} className="bg-[#fce3de] text-slate-700 px-6 py-3.5 text-xs font-medium uppercase tracking-widest rounded-2xl hover:bg-[#f8cfc9] transition-all cursor-pointer shadow-black/10 active:scale-95">
             Add Category
           </button>
         )}
@@ -168,7 +168,7 @@ export default function CategoriesUI({ initialCategories, totalCount, currentPag
             className={inputStyles} 
           />
         </div>
-        <button onClick={() => updateFilters(1)} className="bg-black text-white px-8 py-4 text-xs font-medium uppercase tracking-widest rounded-2xl cursor-pointer shadow-md shadow-black/5 active:scale-95">Search</button>
+        <button onClick={() => updateFilters(1)} className="bg-[#fce3de] text-slate-700 px-8 py-4 text-xs font-medium uppercase tracking-widest rounded-2xl cursor-pointer hover:bg-[#f8cfc9]  shadow-black/5 active:scale-95">Search</button>
       </div>
 
       {/* DATA TABLE */}

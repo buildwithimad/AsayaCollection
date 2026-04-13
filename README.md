@@ -457,7 +457,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <div align="center">
-  <p>Made with ❤️ by the Asaya Collection team</p>
+  <p>Made with ❤️ by Imad Hussain Khan (Full Stack Web Developer)</p>
   <p>
     <a href="#asaya-collection">Back to top</a>
   </p>

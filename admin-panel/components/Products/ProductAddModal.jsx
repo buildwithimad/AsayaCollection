@@ -9,13 +9,17 @@ export default function AddProductModal({ isOpen, onClose, refreshData }) {
   const [categories, setCategories] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([null, null, null, null]);
   
-  // 🌟 New State for Published Toggle (Defaults to true/Live)
+  // 🌟 State for Toggles
   const [isPublished, setIsPublished] = useState(true);
+  const [isBestSeller, setIsBestSeller] = useState(false);
+  const [isTrending, setIsTrending] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       getCategories().then(setCategories);
       setIsPublished(true); // Reset to Live on new open
+      setIsBestSeller(false); // Reset to standard on new open
+      setIsTrending(false); // Reset to standard on new open
     }
   }, [isOpen]);
 
@@ -58,8 +62,38 @@ export default function AddProductModal({ isOpen, onClose, refreshData }) {
             <h2 className="text-2xl font-normal text-slate-800 tracking-tight">Create Masterpiece</h2>
             <p className="text-xs text-slate-400 uppercase tracking-widest mt-1 font-light">Product Integration System</p>
           </div>
-          <div className="flex items-center gap-6">
-            {/* 🌟 Visibility Status Toggle at the top right */}
+          
+          <div className="flex items-center gap-4 flex-wrap justify-end">
+            
+            {/* 🌟 Best Seller Toggle */}
+            <div className="flex items-center gap-3 bg-white border border-slate-100 px-4 py-2 rounded-full hidden sm:flex">
+              <span className={`text-[10px] font-medium uppercase tracking-widest ${isBestSeller ? 'text-amber-500' : 'text-slate-400'}`}>
+                {isBestSeller ? 'Best Seller' : 'Standard'}
+              </span>
+              <button 
+                type="button" 
+                onClick={() => setIsBestSeller(!isBestSeller)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none cursor-pointer ${isBestSeller ? 'bg-amber-500' : 'bg-slate-200'}`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-300 ${isBestSeller ? 'translate-x-4.5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* 🌟 Trending Toggle */}
+            <div className="flex items-center gap-3 bg-white border border-slate-100 px-4 py-2 rounded-full hidden sm:flex">
+              <span className={`text-[10px] font-medium uppercase tracking-widest ${isTrending ? 'text-blue-500' : 'text-slate-400'}`}>
+                {isTrending ? 'Trending' : 'Standard'}
+              </span>
+              <button 
+                type="button" 
+                onClick={() => setIsTrending(!isTrending)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none cursor-pointer ${isTrending ? 'bg-blue-500' : 'bg-slate-200'}`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-300 ${isTrending ? 'translate-x-4.5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* 🌟 Published Toggle */}
             <div className="flex items-center gap-3 bg-white border border-slate-100 px-4 py-2 rounded-full">
               <span className={`text-[10px] font-medium uppercase tracking-widest ${isPublished ? 'text-emerald-500' : 'text-slate-400'}`}>
                 {isPublished ? 'Published' : 'Draft'}
@@ -75,7 +109,7 @@ export default function AddProductModal({ isOpen, onClose, refreshData }) {
 
             <button 
               onClick={onClose} 
-              className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all duration-300 cursor-pointer"
+              className="h-10 w-10 ml-2 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all duration-300 cursor-pointer"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -84,8 +118,10 @@ export default function AddProductModal({ isOpen, onClose, refreshData }) {
 
         <form onSubmit={handleSubmit} className="p-8 overflow-y-auto flex flex-col gap-8 custom-scrollbar">
           
-          {/* Hidden input to pass the toggle state to the server action */}
+          {/* Hidden inputs to pass the toggle states to the server action */}
           <input type="hidden" name="is_published" value={isPublished} />
+          <input type="hidden" name="is_best_seller" value={isBestSeller} />
+          <input type="hidden" name="is_trending" value={isTrending} />
 
           {/* Section 1: Basic Identity */}
           <div className="space-y-4">

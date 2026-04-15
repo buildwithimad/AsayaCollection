@@ -44,45 +44,7 @@ export async function getProductDetails(slug) {
   return data;
 }
 
-export async function getFeaturedProducts() {
-  const { data, error } = await supabase
-    .from("products")
-    .select(`*, categories(name)`)
-    .eq("is_published", true)
-    .limit(12);
 
-  if (error) throw new Error(error.message);
-
-  return data;
-}
-
-export async function getBestSellers() {
-  const { data, error } = await supabase
-    .from("products")
-    .select(`*, categories(name)`)
-    .eq("is_best_seller", true)
-    .eq("is_published", true)
-    .limit(12);
-
-  if (error) throw new Error(error.message);
-
-  return data;
-}
-
-export async function getTrendingProducts() {
-  const { data, error } = await supabase
-    .from("products")
-    .select(`*, categories(name)`)
-    .eq("is_published", true)
-    // 👇 Automatically include if sales > 10 OR if manually marked as trending
-    .or('is_trending.eq.true,sales_count.gt.10') 
-    .order("sales_count", { ascending: false })
-    .limit(10);
-
-  if (error) throw new Error(error.message);
-
-  return data;
-}
 
 export async function getProductBySlug(slug) {
   const { data, error } = await supabase

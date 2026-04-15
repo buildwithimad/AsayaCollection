@@ -58,11 +58,6 @@ export default function BestSellers({ bestSellers = [] }) {
                     Best Seller
                   </span>
                 )}
-                {item.is_trending && (
-                  <span className="bg-white/90 backdrop-blur-md text-[#1a1a1a] px-2 py-0.5 md:px-2.5 md:py-1 text-[6px] md:text-[8px] uppercase tracking-[0.25em] font-bold shadow-sm">
-                    Trending
-                  </span>
-                )}
                 {item.stock <= 5 && item.stock > 0 && (
                   <span className="bg-[#faeceb] text-[#b33a3a] px-2 py-0.5 md:px-2.5 md:py-1 text-[6px] md:text-[8px] uppercase tracking-[0.25em] font-bold shadow-sm">
                     Only {item.stock} Left

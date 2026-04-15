@@ -46,7 +46,10 @@ export async function createProductAction(formData) {
   const description = formData.get('description');
   const category_id = formData.get('category_id');
   const is_published = formData.get('is_published') === 'true';
-  
+  const is_featured = formData.get('is_featured') === 'true';
+  const is_trending = formData.get('is_trending') === 'true';
+  const is_best_seller = formData.get('is_best_seller') === 'true';
+
   // 🌟 Calculate Discount Automatically
   let discount = 0;
   if (compare_price && compare_price > price) {
@@ -98,6 +101,9 @@ export async function createProductAction(formData) {
     details: detailsArray,
     tags: tagsArray,
     is_published: is_published,
+    is_featured: is_featured,
+    is_trending: is_trending,
+    is_best_seller: is_best_seller,
   }]);
 
   if (dbError) return { success: false, message: dbError.message };
@@ -133,7 +139,10 @@ export async function updateProductAction(formData) {
   const description = formData.get('description');
   const category_id = formData.get('category_id');
     const is_published = formData.get('is_published') === 'true';
-  
+    const is_featured = formData.get('is_featured') === 'true';
+    const is_trending = formData.get('is_trending') === 'true';
+    const is_best_seller = formData.get('is_best_seller') === 'true';
+
   // Calculate Discount
   let discount = 0;
   if (compare_price && compare_price > price) {
@@ -178,6 +187,9 @@ export async function updateProductAction(formData) {
     details: detailsArray, 
     tags: tagsArray,
     is_published: is_published
+    ,is_featured: is_featured,
+    is_trending: is_trending,
+    is_best_seller: is_best_seller,
   }).eq('id', id);
 
   if (dbError) return { success: false, message: dbError.message };

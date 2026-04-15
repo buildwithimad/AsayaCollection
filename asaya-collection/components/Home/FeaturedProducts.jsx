@@ -16,7 +16,7 @@ export default function FeaturedProducts({ featuredProducts = [] }) {
           Curated Selection
         </span>
         <h2 className="text-[#1a1a1a] text-4xl md:text-5xl lg:text-6xl font-light tracking-tight mb-6">
-          Featured Collection
+          New Arrival
         </h2>
         <p className="text-[#4a4a4a] text-sm md:text-base font-light tracking-wide max-w-lg leading-relaxed">
           Discover our most sought-after pieces, crafted with precision and designed to elevate your everyday aesthetic.
@@ -25,7 +25,7 @@ export default function FeaturedProducts({ featuredProducts = [] }) {
 
       {/* --- PRODUCT GRID --- */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 md:gap-x-8 gap-y-10 md:gap-y-16">
-        {featuredProducts.slice(0, 4).map((product) => (
+        {featuredProducts.slice(0, 12).map((product) => (
           <div key={product.id} className="group flex flex-col relative w-full">
             
             {/* Image Container */}

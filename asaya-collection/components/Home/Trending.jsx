@@ -88,11 +88,7 @@ export default function TrendingSection({ trendingProducts = [] }) {
               
               {/* Ultra-Minimal Badges */}
               <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5 items-start pointer-events-none">
-                {product.is_best_seller && (
-                  <span className="bg-[#1a1a1a] text-white px-2.5 py-1 text-[8px] uppercase tracking-[0.25em] font-bold shadow-sm">
-                    Best Seller
-                  </span>
-                )}
+               
                 {product.is_trending && (
                   <span className="bg-white/90 backdrop-blur-md text-[#1a1a1a] px-2.5 py-1 text-[8px] uppercase tracking-[0.25em] font-bold shadow-sm">
                     Trending

@@ -11,16 +11,20 @@ export default function EditProductModal({ isOpen, onClose, product, refreshData
   const initialImages = [...(product?.images || []), null, null, null, null].slice(0, 4);
   const [imagePreviews, setImagePreviews] = useState(initialImages);
   
-  // 🌟 New State for Published Toggle (Pulls from existing product data)
+  // 🌟 State for Toggles
   const [isPublished, setIsPublished] = useState(true);
+  const [isBestSeller, setIsBestSeller] = useState(false);
+  const [isTrending, setIsTrending] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       getCategories().then(setCategories);
       setImagePreviews([...(product?.images || []), null, null, null, null].slice(0, 4));
       
-      // Safely default to true if is_published is undefined
+      // Safely default to true if is_published is undefined, false for others
       setIsPublished(product?.is_published ?? true); 
+      setIsBestSeller(product?.is_best_seller ?? false);
+      setIsTrending(product?.is_trending ?? false);
     }
   }, [isOpen, product]);
 
@@ -63,8 +67,37 @@ export default function EditProductModal({ isOpen, onClose, product, refreshData
             <p className="text-xs text-slate-400 uppercase tracking-widest mt-1 font-light">Updating: {product.name}</p>
           </div>
           
-          <div className="flex items-center gap-6">
-            {/* 🌟 Visibility Status Toggle at the top right */}
+          <div className="flex items-center gap-4 flex-wrap justify-end">
+            
+            {/* 🌟 Best Seller Toggle */}
+            <div className="flex items-center gap-3 bg-white border border-slate-100 px-4 py-2 rounded-full hidden sm:flex">
+              <span className={`text-[10px] font-medium uppercase tracking-widest ${isBestSeller ? 'text-amber-500' : 'text-slate-400'}`}>
+                {isBestSeller ? 'Best Seller' : 'Standard'}
+              </span>
+              <button 
+                type="button" 
+                onClick={() => setIsBestSeller(!isBestSeller)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none cursor-pointer ${isBestSeller ? 'bg-amber-500' : 'bg-slate-200'}`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-300 ${isBestSeller ? 'translate-x-4.5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* 🌟 Trending Toggle */}
+            <div className="flex items-center gap-3 bg-white border border-slate-100 px-4 py-2 rounded-full hidden sm:flex">
+              <span className={`text-[10px] font-medium uppercase tracking-widest ${isTrending ? 'text-blue-500' : 'text-slate-400'}`}>
+                {isTrending ? 'Trending' : 'Standard'}
+              </span>
+              <button 
+                type="button" 
+                onClick={() => setIsTrending(!isTrending)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 focus:outline-none cursor-pointer ${isTrending ? 'bg-blue-500' : 'bg-slate-200'}`}
+              >
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-300 ${isTrending ? 'translate-x-4.5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* 🌟 Published Toggle */}
             <div className="flex items-center gap-3 bg-white border border-slate-100 px-4 py-2 rounded-full">
               <span className={`text-[10px] font-medium uppercase tracking-widest ${isPublished ? 'text-emerald-500' : 'text-slate-400'}`}>
                 {isPublished ? 'Published' : 'Draft'}
@@ -78,7 +111,7 @@ export default function EditProductModal({ isOpen, onClose, product, refreshData
               </button>
             </div>
 
-            <button onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all duration-300 cursor-pointer">
+            <button onClick={onClose} className="h-10 w-10 ml-2 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all duration-300 cursor-pointer">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
@@ -86,8 +119,10 @@ export default function EditProductModal({ isOpen, onClose, product, refreshData
 
         <form onSubmit={handleSubmit} className="p-8 overflow-y-auto flex flex-col gap-8 custom-scrollbar">
           
-          {/* Hidden input to pass the toggle state to the server action */}
+          {/* Hidden inputs to pass the toggle states to the server action */}
           <input type="hidden" name="is_published" value={isPublished} />
+          <input type="hidden" name="is_best_seller" value={isBestSeller} />
+          <input type="hidden" name="is_trending" value={isTrending} />
 
           <div className="space-y-4">
             <h3 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-indigo-500 mb-4">General Identity</h3>

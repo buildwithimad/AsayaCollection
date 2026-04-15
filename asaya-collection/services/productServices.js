@@ -48,9 +48,8 @@ export async function getFeaturedProducts() {
   const { data, error } = await supabase
     .from("products")
     .select(`*, categories(name)`)
-    .eq("is_featured", true)
     .eq("is_published", true)
-    .limit(8);
+    .limit(12);
 
   if (error) throw new Error(error.message);
 

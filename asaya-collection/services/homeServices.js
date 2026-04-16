@@ -12,6 +12,7 @@ export async function getHomePageData() {
       sales_count,
       is_trending,
       is_best_seller,
+      stock,
       created_at,
       categories(name)
     `)

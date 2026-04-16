@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import AddToCartButton from '@/components/Ui/AddToCart';
 import ProductReviews from './Reviews'; // Adjust this import path as needed!
+import { useCartStore } from '@/store/cartStore'; // Pulling in Zustand cart store
 
 export default function ProductDetails({ product }) {
+  
   // Safe fallbacks
   const images = product?.images?.length ? product.images : ["/Hero.png"];
   const details = product?.details?.length ? product.details : [];
   const reviews = product?.reviews?.length ? product.reviews : [];
+
 
   // --- CALCULATE REVIEWS ---
   const reviewCount = reviews.length;
@@ -17,13 +20,23 @@ export default function ProductDetails({ product }) {
     ? (reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviewCount).toFixed(1) 
     : 0;
 
-  const [activeImg, setActiveImg] = useState(images[0]);
-  const [openSection, setOpenSection] = useState(null); // Accordions closed by default for a cleaner look
+  // 🌟 FIX: Provide a solid fallback to the initial state
+  const [activeImg, setActiveImg] = useState(images?.[0] || "/Hero.png");
+  const [openSection, setOpenSection] = useState(null); 
+  
+  // 🌟 Quantity & Warning State
+  const [quantity, setQuantity] = useState(1);
+  const [stockWarning, setStockWarning] = useState(false);
 
   // Update active image if the product prop changes
   useEffect(() => {
-    if (images.length > 0) setActiveImg(images[0]);
-  }, [product]);
+    // Check if images exists and has length
+    if (images && images.length > 0) {
+      setActiveImg(images[0]);
+    }
+    setQuantity(1); // Reset quantity when product changes
+    setStockWarning(false);
+  }, [product, images]);
 
   if (!product) return null;
 
@@ -33,11 +46,42 @@ export default function ProductDetails({ product }) {
     name: product.name,
     price: product.price,
     image: images[0],
-    color: "Standard", 
+    color: "Standard",
+    stock: product.stock, 
   };
 
   const toggleSection = (section) => {
     setOpenSection(openSection === section ? null : section);
+  };
+
+  // --- CART & STOCK LOGIC ---
+  const cartItem = useCartStore((state) =>
+    state.cart.find(item => item.id === product.id)
+  );
+
+  // Calculate EXACTLY how many more they are allowed to add
+  const currentQuantityInCart = cartItem ? cartItem.quantity : 0;
+  const maxAvailableToAdd = Math.max(0, product.stock - currentQuantityInCart);
+  
+  const isOutOfStock = maxAvailableToAdd === 0;
+
+  // 🌟 Upgraded Quantity Handlers
+  const increaseQuantity = () => {
+    if (quantity < maxAvailableToAdd) {
+      setQuantity(prev => prev + 1);
+      setStockWarning(false); // Clear warning if valid
+    } else {
+      // Trigger the flash warning!
+      setStockWarning(true);
+      setTimeout(() => setStockWarning(false), 2500); // Hide after 2.5 seconds
+    }
+  };
+
+  const decreaseQuantity = () => {
+    if (quantity > 1) {
+      setQuantity(prev => prev - 1);
+      setStockWarning(false);
+    }
   };
 
   return (
@@ -126,7 +170,7 @@ export default function ProductDetails({ product }) {
                 </div>
               )}
               
-              {/* --- UPDATED PRICING, DISCOUNT & STOCK --- */}
+              {/* --- PRICING, DISCOUNT & STOCK --- */}
               <div className="flex flex-col gap-2 mb-8">
                 <div className="flex items-baseline gap-3">
                   <p className="text-2xl md:text-3xl font-normal text-[#1a1a1a]">
@@ -138,7 +182,6 @@ export default function ProductDetails({ product }) {
                       <p className="text-sm text-[#888] line-through font-light">
                         Rs. {product.compare_price.toLocaleString()}
                       </p>
-                      {/* 🌟 USES DB DISCOUNT FIELD */}
                       {product.discount && (
                         <span className="bg-[#b33a3a]/5 border border-[#b33a3a]/20 text-[#b33a3a] px-2 py-1 text-[9px] uppercase tracking-[0.2em] font-bold">
                           {product.discount}% OFF
@@ -149,16 +192,16 @@ export default function ProductDetails({ product }) {
                 </div>
 
                 {/* Dynamic Stock Urgency */}
-                {product.stock > 0 && product.stock <= 10 && (
+                {maxAvailableToAdd > 0 && maxAvailableToAdd <= 10 && (
                   <span className="text-xs text-[#b33a3a] font-medium tracking-wide mt-1">
-                    {product.stock === 1 
-                      ? "Last piece left in stock!" 
-                      : `Only ${product.stock} pieces left in stock!`}
+                    {maxAvailableToAdd === 1 
+                      ? "Last piece available to add!" 
+                      : `Only ${maxAvailableToAdd} pieces left available!`}
                   </span>
                 )}
-                {product.stock === 0 && (
+                {isOutOfStock && (
                   <span className="text-xs text-[#888] font-medium tracking-wide uppercase mt-1">
-                    Currently Out of Stock
+                    {product.stock === 0 ? 'Currently Out of Stock' : 'Maximum stock reached in your cart'}
                   </span>
                 )}
               </div>
@@ -168,10 +211,53 @@ export default function ProductDetails({ product }) {
                 {product.description}
               </p>
 
-              {/* --- DELIVERY & ADD TO CART --- */}
-              <div className="flex flex-col gap-4 mb-12">
-                <AddToCartButton product={cartPayload} variant="primary" disabled={product.stock === 0} />
-                <div className="flex items-center justify-center gap-2 text-[#888]">
+              {/* --- 🌟 QUANTITY & ADD TO CART --- */}
+              <div className="flex flex-col gap-6 mb-12">
+                
+                {/* Quantity Selector */}
+                {!isOutOfStock && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-6">
+                      <span className="text-[10px] uppercase tracking-[0.2em] font-medium text-[#888]">Quantity</span>
+                      <div className="flex items-center border border-[#1a1a1a]/20 h-12 w-32 relative">
+                        <button 
+                          onClick={decreaseQuantity} 
+                          disabled={quantity <= 1}
+                          className="flex-1 h-full flex justify-center items-center text-[#1a1a1a] hover:bg-[#faeceb] disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                        >
+                          −
+                        </button>
+                        <span className="flex-1 text-center text-sm font-medium">{quantity}</span>
+                        {/* 🌟 Removed the 'disabled' attribute so they can click it and trigger the error */}
+                        <button 
+                          onClick={increaseQuantity} 
+                          className={`flex-1 h-full flex justify-center items-center text-[#1a1a1a] transition-colors ${quantity >= maxAvailableToAdd ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[#faeceb] cursor-pointer'}`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* 🌟 The Flash Error Message */}
+                    <div className={`text-[10px] uppercase tracking-widest font-bold text-[#b33a3a] transition-all duration-300 h-4 ${stockWarning ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+                      Only {maxAvailableToAdd} {maxAvailableToAdd === 1 ? 'piece' : 'pieces'} remaining!
+                    </div>
+                  </div>
+                )}
+
+                {/* Add To Cart Button */}
+                <AddToCartButton 
+                  product={cartPayload} 
+                  variant="primary" 
+                  disabled={isOutOfStock} 
+                  quantityToAdd={quantity} 
+                  onClick={() => {
+                    // Reset quantity back to 1 after successful addition
+                    setTimeout(() => setQuantity(1), 500);
+                  }}
+                />
+                
+                <div className="flex items-center justify-center gap-2 text-[#888] mt-2">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
                   <p className="text-[9px] uppercase tracking-widest font-medium">
                     Nationwide Cash on Delivery Available

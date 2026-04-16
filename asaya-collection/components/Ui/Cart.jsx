@@ -10,8 +10,11 @@ export default function Cart({ isOpen, onClose }) {
   const [isMounted, setIsMounted] = useState(false);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   
-  // 🌟 State to track the ID of the item currently being removed
+  // State to track item removal spinner
   const [removingItemId, setRemovingItemId] = useState(null);
+  
+  // 🌟 NEW: Track which item triggered the stock warning flash
+  const [stockWarningId, setStockWarningId] = useState(null);
 
   // Pull global state and actions directly from Zustand
   const { cart, addToCart, decreaseQty, removeFromCart } = useCartStore();
@@ -30,9 +33,14 @@ export default function Cart({ isOpen, onClose }) {
   const totalItems = isMounted ? cart.reduce((acc, item) => acc + item.quantity, 0) : 0;
   const subtotal = isMounted ? cart.reduce((acc, item) => acc + (item.price * item.quantity), 0) : 0;
 
+  // 🌟 NEW: Check if any item in the cart exceeds the warehouse stock limit
+  const hasInvalidItems = isMounted ? cart.some(item => item.quantity > (item.stock || 0)) : false;
+
   // Handle Checkout Navigation
   const handleCheckout = (e) => {
     e.preventDefault();
+    if (hasInvalidItems) return; // Extra security layer
+
     setIsCheckoutLoading(true);
     setTimeout(() => {
       router.push('/checkout');
@@ -41,15 +49,27 @@ export default function Cart({ isOpen, onClose }) {
     }, 500);
   };
 
-  // 🌟 Handle Item Removal with Feedback
+  // Handle Item Removal with Feedback
   const handleRemoveItem = (id) => {
-    setRemovingItemId(id); // Start loading state for this specific item
-
-    // Wait 500ms so the user sees the spinner/feedback, then actually remove it
+    setRemovingItemId(id); 
     setTimeout(() => {
       removeFromCart(id);
-      setRemovingItemId(null); // Reset
+      setRemovingItemId(null); 
     }, 500);
+  };
+
+  // 🌟 NEW: Handle Quantity Increase with Stock Limit Check
+  const handleIncrease = (item) => {
+    const maxAvailable = item.stock || 0;
+    
+    if (item.quantity < maxAvailable) {
+      addToCart(item, 1);
+      setStockWarningId(null);
+    } else {
+      // Trigger the flash warning for this specific item!
+      setStockWarningId(item.id);
+      setTimeout(() => setStockWarningId(null), 2500); 
+    }
   };
 
   if (!isMounted) return null;
@@ -86,79 +106,99 @@ export default function Cart({ isOpen, onClose }) {
         {/* Cart Items */}
         <div className="flex-1 overflow-y-auto px-8 py-6 flex flex-col gap-8">
           {cart.length > 0 ? (
-            cart.map((item) => (
-              <div 
-                key={item.id} 
-                className={`flex gap-6 group transition-all duration-300 ${removingItemId === item.id ? 'opacity-40 scale-95 pointer-events-none' : 'opacity-100'}`}
-              >
-                {/* Product Image */}
-                <div className="relative w-24 h-32 bg-[#faeceb]/40 shrink-0 border border-[#1a1a1a]/5 overflow-hidden">
-                  <Image src={item.image} alt={item.name} fill className="object-cover" />
-                  
-                  {/* 🌟 Visual overlay when removing */}
-                  {removingItemId === item.id && (
-                    <div className="absolute inset-0 bg-[#fdfbfb]/60 backdrop-blur-sm flex items-center justify-center">
-                       <svg className="w-5 h-5 text-[#1a1a1a] animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Product Info & Actions */}
-                <div className="flex flex-col justify-between flex-1 py-1">
-                  <div>
-                    <div className="flex justify-between items-start mb-1 relative">
-                      <h3 className="text-[#1a1a1a] text-sm font-light tracking-wide">{item.name}</h3>
-                      
-                      {/* 🌟 Updated Remove Item Button */}
-                      <button 
-                        onClick={() => handleRemoveItem(item.id)}
-                        disabled={removingItemId === item.id}
-                        className="text-[#1a1a1a]/40 hover:text-[#b33a3a] transition-colors text-xs cursor-pointer p-1 -mr-1 relative w-6 h-6 flex items-center justify-center"
-                        aria-label="Remove item"
-                      >
-                        {removingItemId === item.id ? (
-                           <span className="text-[8px] uppercase tracking-widest text-[#b33a3a] font-bold absolute right-0 whitespace-nowrap">
-                             Removing...
-                           </span>
-                        ) : (
-                          <svg className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="1.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-[#666] text-[10px] uppercase tracking-[0.1em]">{item.color || "Standard"}</p>
+            cart.map((item) => {
+              const maxAvailable = item.stock || 0;
+              const isExceeding = item.quantity > maxAvailable;
+
+              return (
+                <div 
+                  key={item.id} 
+                  className={`flex gap-6 group transition-all duration-300 ${removingItemId === item.id ? 'opacity-40 scale-95 pointer-events-none' : 'opacity-100'}`}
+                >
+                  {/* Product Image */}
+                  <div className="relative w-24 h-32 bg-[#faeceb]/40 shrink-0 border border-[#1a1a1a]/5 overflow-hidden">
+                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                    
+                    {removingItemId === item.id && (
+                      <div className="absolute inset-0 bg-[#fdfbfb]/60 backdrop-blur-sm flex items-center justify-center">
+                         <svg className="w-5 h-5 text-[#1a1a1a] animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
+                    )}
                   </div>
                   
-                  <div className="flex justify-between items-end mt-4">
-                    <div className="flex items-center border border-[#1a1a1a]/20">
-                      <button 
-                        onClick={() => decreaseQty(item.id)}
-                        className="px-3 py-1 text-[#666] hover:text-[#1a1a1a] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                        disabled={item.quantity <= 1 || removingItemId === item.id}
-                      >
-                        -
-                      </button>
-                      <span className="text-xs w-4 text-center select-none">{item.quantity}</span>
-                      
-                      <button 
-                        onClick={() => addToCart(item)}
-                        className="px-3 py-1 text-[#666] hover:text-[#1a1a1a] transition-colors cursor-pointer disabled:opacity-30"
-                        disabled={removingItemId === item.id}
-                      >
-                        +
-                      </button>
+                  {/* Product Info & Actions */}
+                  <div className="flex flex-col justify-between flex-1 py-1">
+                    <div>
+                      <div className="flex justify-between items-start mb-1 relative">
+                        <h3 className={`text-sm font-light tracking-wide ${isExceeding ? 'text-[#b33a3a] font-medium' : 'text-[#1a1a1a]'}`}>
+                          {item.name}
+                        </h3>
+                        
+                        <button 
+                          onClick={() => handleRemoveItem(item.id)}
+                          disabled={removingItemId === item.id}
+                          className="text-[#1a1a1a]/40 hover:text-[#b33a3a] transition-colors text-xs cursor-pointer p-1 -mr-1 relative w-6 h-6 flex items-center justify-center"
+                          aria-label="Remove item"
+                        >
+                          {removingItemId === item.id ? (
+                             <span className="text-[8px] uppercase tracking-widest text-[#b33a3a] font-bold absolute right-0 whitespace-nowrap">
+                               Removing...
+                             </span>
+                          ) : (
+                            <svg className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="1.5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-[#666] text-[10px] uppercase tracking-[0.1em]">{item.color || "Standard"}</p>
                     </div>
-                    <span className="text-[#1a1a1a] text-sm font-medium">
-                      Rs {(item.price * item.quantity).toLocaleString()}
-                    </span>
+                    
+                    <div>
+                      <div className="flex justify-between items-end mt-4">
+                        {/* Quantity Selector */}
+                        <div className={`flex items-center border transition-colors ${isExceeding ? 'border-[#b33a3a]/40' : 'border-[#1a1a1a]/20'}`}>
+                          <button 
+                            onClick={() => decreaseQty(item.id)}
+                            className="px-3 py-1 text-[#666] hover:text-[#1a1a1a] transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                            disabled={item.quantity <= 1 || removingItemId === item.id}
+                          >
+                            -
+                          </button>
+                          <span className={`text-xs w-4 text-center select-none ${isExceeding ? 'text-[#b33a3a] font-bold' : ''}`}>
+                            {item.quantity}
+                          </span>
+                          
+                          {/* 🌟 Upgraded Plus Button */}
+                          <button 
+                            onClick={() => handleIncrease(item)}
+                            className={`px-3 py-1 transition-colors ${item.quantity >= maxAvailable ? 'text-[#1a1a1a]/30 cursor-not-allowed' : 'text-[#666] hover:text-[#1a1a1a] cursor-pointer'}`}
+                            disabled={removingItemId === item.id}
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <span className={`text-sm font-medium ${isExceeding ? 'text-[#b33a3a]' : 'text-[#1a1a1a]'}`}>
+                          Rs {(item.price * item.quantity).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {/* 🌟 The Item-Level Flash Error Message */}
+                      <div className={`text-[9px] uppercase tracking-widest font-bold text-[#b33a3a] transition-all duration-300 text-right mt-1.5 ${stockWarningId === item.id || isExceeding ? 'opacity-100 h-3' : 'opacity-0 h-0 pointer-events-none'}`}>
+                        {maxAvailable === 0 
+                          ? 'Out of Stock' 
+                          : `Only ${maxAvailable} ${maxAvailable === 1 ? 'piece' : 'pieces'} available`
+                        }
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="w-16 h-16 mb-6 rounded-full bg-[#faeceb]/40 flex items-center justify-center border border-[#1a1a1a]/5">
@@ -186,10 +226,20 @@ export default function Cart({ isOpen, onClose }) {
             </div>
             <p className="text-[#666] text-[10px] tracking-wide mb-6">Shipping and taxes calculated at checkout.</p>
             
+            {/* 🌟 Global Cart Warning */}
+            {hasInvalidItems && (
+              <div className="mb-4 p-3 bg-[#b33a3a]/5 border border-[#b33a3a]/20 flex items-center justify-center animate-in fade-in zoom-in duration-300">
+                <span className="text-[9px] uppercase tracking-[0.1em] text-[#b33a3a] font-bold text-center">
+                  Some items exceed available stock. Adjust quantities to proceed.
+                </span>
+              </div>
+            )}
+
             <button 
               onClick={handleCheckout}
-              disabled={isCheckoutLoading}
-              className="w-full relative flex items-center justify-center bg-[#1a1a1a] text-white py-4 text-xs uppercase tracking-[0.2em] font-medium cursor-pointer transition-all overflow-hidden disabled:bg-[#333] disabled:cursor-wait"
+              disabled={isCheckoutLoading || hasInvalidItems}
+              className={`w-full relative flex items-center justify-center py-4 text-xs uppercase tracking-[0.2em] font-medium transition-all overflow-hidden 
+                ${hasInvalidItems ? 'bg-[#1a1a1a]/10 text-[#1a1a1a]/40 cursor-not-allowed' : 'bg-[#1a1a1a] text-white hover:bg-[#333] cursor-pointer disabled:bg-[#333] disabled:cursor-wait'}`}
             >
               <span className={`transition-all duration-300 transform ${isCheckoutLoading ? '-translate-y-8 opacity-0' : 'translate-y-0 opacity-100'}`}>
                 Proceed to Checkout

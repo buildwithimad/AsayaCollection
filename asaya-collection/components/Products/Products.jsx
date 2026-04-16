@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import AddToCartButton from '../Ui/AddToCart'; 
 import { getFilteredProductsAction } from '@/app/actions/productServices';
+import { useCartStore } from '@/store/cartStore'; // 🌟 1. Import Cart Store
 
 const SORT_OPTIONS = ["Newest Arrivals", "Price: Low to High", "Price: High to Low"];
 const ITEMS_PER_PAGE = 12;
@@ -16,6 +17,9 @@ export default function Products({ initialProducts = [], categories = [] }) {
   const pathname = usePathname();
   const categoryFromUrl = searchParams.get('category'); 
 
+  // 🌟 2. Fetch the cart at the top level
+  const cart = useCartStore((state) => state.cart || []);
+
   // --- STATE MANAGEMENT ---
   const [products, setProducts] = useState(initialProducts);
   const [activeCategory, setActiveCategory] = useState(categoryFromUrl || "All");
@@ -23,7 +27,7 @@ export default function Products({ initialProducts = [], categories = [] }) {
   const [showBestSellers, setShowBestSellers] = useState(false);
   const [showTrending, setShowTrending] = useState(false);
   const [navigatingId, setNavigatingId] = useState(null);
-  
+
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -40,33 +44,27 @@ export default function Products({ initialProducts = [], categories = [] }) {
   const handleCategoryChange = (cat) => {
     setActiveCategory(cat);
     
-    // 1. Get the current URL parameters
     const params = new URLSearchParams(searchParams);
     
-    // 2. Add or remove the category
     if (cat === "All") {
       params.delete('category');
     } else {
       params.set('category', cat);
     }
     
-    // 3. Push the new URL silently
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  // Sync initial URL category if it changes
   useEffect(() => {
     if (categoryFromUrl) setActiveCategory(categoryFromUrl);
   }, [categoryFromUrl]);
 
-  // Prevent background scrolling when mobile menu is open
   useEffect(() => {
     if (isMobileFilterOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [isMobileFilterOpen]);
 
-  // --- SERVER ACTION FETCHING LOGIC ---
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -78,7 +76,7 @@ export default function Products({ initialProducts = [], categories = [] }) {
       });
       
       setProducts(filteredData);
-      setCurrentPage(1); // Reset to page 1 whenever filters change
+      setCurrentPage(1); 
     } catch (error) {
       console.error("Failed to fetch products:", error);
     } finally {
@@ -86,15 +84,12 @@ export default function Products({ initialProducts = [], categories = [] }) {
     }
   }, [activeCategory, activeSort, showBestSellers, showTrending]);
 
-  // Trigger fetch when any filter state changes
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Generate category list for sidebar
   const categoryList = ["All", ...categories.map(cat => cat.name)];
 
-  // --- PAGINATION (Client-side slicing of fetched results) ---
   const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
   const currentProducts = products.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -124,7 +119,6 @@ export default function Products({ initialProducts = [], categories = [] }) {
         {/* --- DESKTOP SIDEBAR --- */}
         <aside className="hidden lg:block w-1/4 max-w-[280px] shrink-0 sticky top-32 h-fit">
           
-          {/* Featured */}
           <div className="mb-10">
             <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">Featured</h3>
             <div className="flex flex-col gap-4">
@@ -139,7 +133,6 @@ export default function Products({ initialProducts = [], categories = [] }) {
             </div>
           </div>
 
-          {/* Categories */}
           <div className="mb-10">
             <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">Categories</h3>
             <ul className="flex flex-col gap-4">
@@ -156,7 +149,6 @@ export default function Products({ initialProducts = [], categories = [] }) {
             </ul>
           </div>
 
-          {/* Sort By */}
           <div>
             <h3 className="text-xs uppercase tracking-[0.2em] font-medium mb-6 border-b border-[#1a1a1a]/10 pb-4">Sort By</h3>
             <ul className="flex flex-col gap-4">
@@ -187,7 +179,6 @@ export default function Products({ initialProducts = [], categories = [] }) {
             </span>
           </div>
 
-          {/* LOADING SPINNER OVERLAY */}
           {loading && (
             <div className="absolute inset-0 z-10 flex items-start justify-center bg-[#fdfbfb]/60 backdrop-blur-[2px] pt-20">
               <div className="w-8 h-8 border-2 border-[#1a1a1a]/20 border-t-[#1a1a1a] rounded-full animate-spin"></div>
@@ -199,49 +190,59 @@ export default function Products({ initialProducts = [], categories = [] }) {
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-12 md:gap-x-8 md:gap-y-16">
                 {currentProducts.map((product) => {
                   
-                  // --- CALCULATE REVIEWS DYNAMICALLY ---
                   const reviews = product.reviews || [];
                   const reviewCount = reviews.length;
                   const avgRating = reviewCount > 0 
                     ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviewCount).toFixed(1) 
                     : 0;
 
+                  // 🌟 3. CALCULATE OUT OF STOCK STATUS
+                  const cartItem = cart.find(item => item.id === product.id);
+                  const currentQuantityInCart = cartItem ? cartItem.quantity : 0;
+                  const isOutOfStock = product.stock === 0 || currentQuantityInCart >= product.stock;
+
                   return (
                     <div key={product.id} className="group relative flex flex-col h-full animate-in fade-in duration-500">
                       
-                      {/* --- IMAGE CONTAINER --- */}
                       <div className="relative w-full aspect-[4/5] bg-[#faeceb]/40 mb-4 overflow-hidden">
                        <Link 
-      href={`/collections/${product.slug || product.id}`} 
-      onClick={() => setNavigatingId(product.id)} // 🌟 Trigger loading state on click
-      className="absolute inset-0 z-0"
-    >
-      <Image
-        src={product.images?.[0] || "/Hero.png"} 
-        alt={product.name}
-        fill
-        sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-        className="object-cover object-center transition-transform duration-[1.5s] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-105"
-      />
-      
-      {/* 🌟 THE CLICK-TO-NAVIGATE SPINNER */}
-      {navigatingId === product.id && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#fdfbfb]/50 backdrop-blur-[2px]">
-          <div className="w-8 h-8 border-2 border-[#1a1a1a]/20 border-t-[#1a1a1a] rounded-full animate-spin"></div>
-        </div>
-      )}
-    </Link>
+                          href={`/collections/${product.slug || product.id}`} 
+                          onClick={() => setNavigatingId(product.id)}
+                          className="absolute inset-0 z-0"
+                        >
+                          <Image
+                            src={product.images?.[0] || "/Hero.png"} 
+                            alt={product.name}
+                            fill
+                            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                            className="object-cover object-center transition-transform duration-[1.5s] ease-[cubic-bezier(0.25,0.46,0.45,0.94)] group-hover:scale-105"
+                          />
+                          
+                          {navigatingId === product.id && (
+                            <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#fdfbfb]/50 backdrop-blur-[2px]">
+                              <div className="w-8 h-8 border-2 border-[#1a1a1a]/20 border-t-[#1a1a1a] rounded-full animate-spin"></div>
+                            </div>
+                          )}
+                        </Link>
 
-                        {/* STATUS BADGES */}
+                        {/* 🌟 4. STATUS BADGES W/ OUT OF STOCK */}
                         <div className="absolute top-2 left-2 md:top-3 md:left-3 z-10 flex flex-col gap-1 items-start pointer-events-none">
-                          {product.is_best_seller && (
-                            <span className="bg-[#1a1a1a] text-[#fdfbfb] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">Best Seller</span>
-                          )}
-                          {product.is_trending && (
-                            <span className="bg-[#fdfbfb]/80 backdrop-blur-sm text-[#1a1a1a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">Trending</span>
-                          )}
-                          {product.stock <= 5 && product.stock > 0 && (
-                            <span className="bg-[#faeceb] text-[#1a1a1a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">Almost Sold Out</span>
+                          {product.stock === 0 ? (
+                            <span className="bg-white/90 backdrop-blur-md text-[#b33a3a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-bold border border-[#1a1a1a]/10 shadow-sm">
+                              Out of Stock
+                            </span>
+                          ) : (
+                            <>
+                              {product.is_best_seller && (
+                                <span className="bg-[#1a1a1a] text-[#fdfbfb] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">Best Seller</span>
+                              )}
+                              {product.is_trending && (
+                                <span className="bg-[#fdfbfb]/80 backdrop-blur-sm text-[#1a1a1a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-medium border border-[#1a1a1a]/10">Trending</span>
+                              )}
+                              {product.stock <= 5 && product.stock > 0 && (
+                                <span className="bg-[#faeceb] text-[#b33a3a] px-2 py-0.5 text-[7px] md:text-[8px] uppercase tracking-[0.25em] font-bold border border-[#1a1a1a]/10">Only {product.stock} Left</span>
+                              )}
+                            </>
                           )}
                         </div>
 
@@ -254,17 +255,18 @@ export default function Products({ initialProducts = [], categories = [] }) {
                                 name: product.name,
                                 price: product.price,
                                 image: product.images?.[0] || "/Hero.png",
+                                stock: product.stock // 🌟 Send stock
                               }} 
                               variant="glass" 
                               fullWidth={true} 
+                              disabled={isOutOfStock} // 🌟 Disable button
                             />
                           </div>
                         </div>
                       </div>
 
-                      {/* --- TEXT CONTAINER --- */}
                       <Link href={`/collections/${product.slug || product.id}`}
-                      onClick={() => setNavigatingId(product.id)} // 🌟 Add it here too!
+                      onClick={() => setNavigatingId(product.id)}
                        className="flex flex-col items-center text-center flex-1 p-1">
                         <span className="text-[#888] text-[9px] md:text-[10px] uppercase tracking-[0.15em] mb-1 font-medium capitalize">
                           {product.categories?.name?.replace(/-/g, ' ') || "Collection"}
@@ -274,7 +276,6 @@ export default function Products({ initialProducts = [], categories = [] }) {
                           {product.name}
                         </h3>
 
-                        {/* REVIEW STARS & COUNT */}
                         {reviewCount > 0 && (
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <div className="flex gap-0.5">
@@ -288,17 +289,8 @@ export default function Products({ initialProducts = [], categories = [] }) {
                           </div>
                         )}
 
-                        {/* STOCK URGENCY INDICATOR */}
-                        {product.stock > 0 && product.stock <= 10 && (
-                          <div className="mb-2">
-                            <span className="text-[9px] md:text-[10px] text-[#b33a3a] font-medium tracking-wide">
-                              {product.stock === 1 ? "Last piece left!" : `Only ${product.stock} pieces left!`}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* PRICING & DISCOUNT */}
-                        <div className="flex items-center justify-center gap-2 text-xs md:text-sm font-medium mt-auto">
+                        {/* 🌟 5. UPDATE PRICING CONTAINER TO PUSH BOTTOM */}
+                        <div className="flex items-center justify-center gap-2 text-xs md:text-sm font-medium mt-auto pb-1">
                           <span className="text-[#1a1a1a]">Rs. {product.price?.toLocaleString()}</span>
                           {product.compare_price && product.compare_price > product.price && (
                             <div className="flex items-center gap-1.5">
@@ -316,16 +308,18 @@ export default function Products({ initialProducts = [], categories = [] }) {
                       </Link>
 
                       {/* Mobile Add to Cart */}
-                      <div className="lg:hidden mt-4 relative z-20">
+                      <div className="lg:hidden mt-3 relative z-20">
                         <AddToCartButton 
                           product={{
                             id: product.id,
                             name: product.name,
                             price: product.price,
                             image: product.images?.[0] || "/Hero.png",
+                            stock: product.stock // 🌟 Send stock
                           }} 
                           variant="outline" 
                           className="py-3 text-[9px] tracking-[0.15em]" 
+                          disabled={isOutOfStock} // 🌟 Disable button
                         />
                       </div>
 

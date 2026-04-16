@@ -8,30 +8,33 @@ export default function AddToCartButton({
   variant = 'primary', 
   fullWidth = true,
   onClick,
-  className = ''
+  className = '',
+  disabled = false,        // 🌟 Accepts the disabled state from ProductDetails
+  quantityToAdd = 1        // 🌟 Accepts the quantity from the selector
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(false);
   
   // Pull functions from Zustand
   const addToCart = useCartStore((state) => state.addToCart);
-  const openCart = useCartStore((state) => state.openCart); // 🌟 Added this
+  const openCart = useCartStore((state) => state.openCart);
 
   const handleAdd = (e) => {
     e.stopPropagation();
     e.preventDefault();
 
-    if (!product) return;
+    // Prevent adding if no product or if button is disabled
+    if (!product || disabled) return;
 
     // 1. Trigger Loading State
     setIsAdding(true);
 
     // 2. Simulate network delay for premium feel (500ms)
     setTimeout(() => {
-      // Add to global cart
-      addToCart(product);
+      // Add to global cart WITH the specified quantity
+      addToCart(product, quantityToAdd);
       
-      // 🌟 Open the Cart Drawer automatically
+      // Open the Cart Drawer automatically
       if (openCart) openCart();
       if (onClick) onClick(product);
 
@@ -46,7 +49,7 @@ export default function AddToCartButton({
     }, 500);
   };
 
-  const baseStyles = "relative flex items-center justify-center text-[10px] cursor-pointer uppercase tracking-[0.2em] font-medium py-4 px-8 transition-colors duration-300 overflow-hidden";
+  const baseStyles = "relative flex items-center justify-center text-[10px] uppercase tracking-[0.2em] font-medium py-4 px-8 transition-colors duration-300 overflow-hidden";
   const widthStyles = fullWidth ? "w-full" : "w-auto";
   
   const variantStyles = {
@@ -55,15 +58,25 @@ export default function AddToCartButton({
     outline: "border border-[#1a1a1a] text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-[#fdfbfb]"
   };
 
+  // 🌟 Handle Disabled Styling
+  const isButtonDisabled = disabled || isAdding || isAdded;
+  const cursorStyle = disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer";
+
+  // 🌟 Smart Button Text based on stock
+  let buttonText = variant === 'glass' ? 'Quick Add' : 'Add to Cart';
+  if (disabled) {
+    buttonText = product?.stock === 0 ? 'Out of Stock' : 'Max Stock Reached';
+  }
+
   return (
     <button 
       onClick={handleAdd}
-      disabled={isAdding || isAdded}
-      className={`${baseStyles} ${widthStyles} ${variantStyles[variant]} ${className}`}
+      disabled={isButtonDisabled}
+      className={`${baseStyles} ${widthStyles} ${variantStyles[variant]} ${cursorStyle} ${className}`}
     >
       {/* 1. DEFAULT STATE: Text */}
       <span className={`transition-all duration-300 transform ${isAdding || isAdded ? '-translate-y-8 opacity-0' : 'translate-y-0 opacity-100'}`}>
-        {variant === 'glass' ? 'Quick Add' : 'Add to Cart'}
+        {buttonText}
       </span>
       
       {/* 2. LOADING STATE: Spinner */}

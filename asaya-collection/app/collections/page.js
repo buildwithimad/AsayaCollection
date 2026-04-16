@@ -47,6 +47,8 @@ export default async function ProductsPage({ searchParams }) {
   const { products, totalPages } = await getAllProducts(page);
   const categories = await getAllCategories();
 
+  console.log("Fetched products:", products); // Debug log to verify fetched products
+
   return (
     <main>
       {/* 4. Pass the user object to the client component */}

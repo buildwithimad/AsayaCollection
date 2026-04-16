@@ -1,16 +1,75 @@
 // /services/orderServices.js
 import { supabase } from "@/lib/supabase";
 
-export async function submitOrder(orderPayload) {
-  const { data, error } = await supabase
+
+export async function submitOrder(orderPayload, cartItems) {
+  // 🛑 NOTE: Make sure your supabase client is initialized here!
+  // Example: const supabase = await createClient();
+
+  // ---------------------------------------------------------
+  // 1️⃣ PHASE ONE: VERIFY ALL STOCK (Read-Only)
+  // Do not change any database values yet. Just check if the order is valid.
+  // ---------------------------------------------------------
+  for (const item of cartItems) {
+    const { data: product, error: fetchError } = await supabase
+      .from("products")
+      .select("stock")
+      .eq("id", item.id)
+      .single();
+
+    if (fetchError) throw new Error(`Could not verify stock for ${item.name}`);
+
+    // If even ONE item is out of stock, reject the entire checkout
+    if (!product || product.stock < item.quantity) {
+      throw new Error(`Unfortunately, ${item.name} does not have enough stock remaining.`);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 2️⃣ PHASE TWO: SECURE THE ORDER
+  // Now that we know stock is good, create the order FIRST.
+  // ---------------------------------------------------------
+  const { data: orderData, error: orderError } = await supabase
     .from("orders")
     .insert([orderPayload])
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (orderError) throw new Error(`Order failed to process: ${orderError.message}`);
 
-  return data;
+  // ---------------------------------------------------------
+  // 3️⃣ PHASE THREE: DEDUCT THE STOCK
+  // The order is safely in the database. Now we adjust the warehouse numbers.
+  // ---------------------------------------------------------
+  for (const item of cartItems) {
+    // Fetch fresh stock to be 100% mathematically accurate
+    const { data: product } = await supabase
+      .from("products")
+      .select("stock")
+      .eq("id", item.id)
+      .single();
+
+    if (product) {
+      // Math.max ensures your database stock can NEVER drop below 0
+      const newStock = Math.max(0, product.stock - item.quantity);
+
+      const { error: updateError } = await supabase
+        .from("products")
+        .update({ stock: newStock })
+        .eq("id", item.id);
+
+      if (updateError) {
+        // 🌟 CRITICAL: We console.error here instead of throwing an error!
+        // The customer's order was already successful in Phase 2. 
+        // If a stock update fails (usually due to Supabase RLS security policies), 
+        // we don't want to show the customer a terrifying "Checkout Failed" screen.
+        console.error(`Admin Alert: Failed to update stock for ${item.name}:`, updateError.message);
+      }
+    }
+  }
+
+  // 4️⃣ Return the successful order back to the Checkout component
+  return orderData;
 }
 
 

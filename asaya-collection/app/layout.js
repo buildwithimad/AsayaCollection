@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabaseServer';
 import { UserProvider } from '@/context/UserContext';
 import NextTopLoader from 'nextjs-toploader';
 import WhatsAppButton from "@/components/Ui/WhatsappButton";
-import SmoothScroll from "@/components/SmoothScroll";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -48,12 +47,10 @@ export default async function RootLayout({ children }) {
         />
         <UserProvider user={user}>
           
-        <SmoothScroll>
           <Navbar />
           {children}
           <Footer />
           <WhatsAppButton />
-          </SmoothScroll>
         </UserProvider>
       </body>
     </html>
